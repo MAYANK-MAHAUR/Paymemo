@@ -250,18 +250,23 @@
     color: transparent;
   }
 
-  /* Bulb flicker — blink white twice then settle on black. */
+  /* Bulb flicker — blink 3 times, accelerating to a fast final flick. */
   @keyframes bulb-flicker {
+    /* Blink 1 (slow) */
     0%   { color: #ffffff; text-shadow: 0 0 18px rgba(255,255,255,0.55); }
-    20%  { color: #000000; text-shadow: none; }
+    25%  { color: #000000; text-shadow: none; }
+    /* Blink 2 (medium) */
     40%  { color: #ffffff; text-shadow: 0 0 18px rgba(255,255,255,0.55); }
-    60%  { color: #000000; text-shadow: none; }
-    80%  { color: #ffffff; text-shadow: 0 0 18px rgba(255,255,255,0.55); }
+    55%  { color: #000000; text-shadow: none; }
+    /* Blink 3 (fast) */
+    65%  { color: #ffffff; text-shadow: 0 0 22px rgba(255,255,255,0.7); }
+    72%  { color: #000000; text-shadow: none; }
+    80%  { color: #ffffff; text-shadow: 0 0 22px rgba(255,255,255,0.7); }
     100% { color: #000000; text-shadow: none; }
   }
 
   .bulb-flicker {
-    animation: bulb-flicker 1.6s steps(1, end) 1 both;
+    animation: bulb-flicker 1.4s steps(1, end) 1 both;
   }
 
   @media (prefers-reduced-motion: reduce) {
