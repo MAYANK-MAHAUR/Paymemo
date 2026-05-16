@@ -46,7 +46,7 @@ export function WalletAssist() {
   return (
     <section
       id="wallet-assist"
-      className="dark relative overflow-hidden bg-background text-foreground py-28 sm:py-36 px-6 border-y border-foreground/10"
+      className="relative overflow-hidden bg-background text-foreground py-28 sm:py-36 px-6 border-y border-foreground/10"
     >
       <div aria-hidden className="absolute inset-0 bg-[radial-gradient(900px_500px_at_80%_20%,color-mix(in_oklab,var(--pink)_20%,transparent),transparent_60%)]" />
       <div aria-hidden className="absolute inset-0 grain opacity-[0.06] mix-blend-overlay" />
