@@ -6,10 +6,12 @@ import {
   useRouter,
   HeadContent,
   Scripts,
+  useRouterState,
 } from "@tanstack/react-router";
 
 import appCss from "../styles.css?url";
 import { BeaconCursor } from "@/components/fx/BeaconCursor";
+import { Toaster } from "@/components/ui/sonner";
 
 function NotFoundComponent() {
   return (
@@ -124,11 +126,14 @@ function RootShell({ children }: { children: React.ReactNode }) {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+  const path = useRouterState({ select: (state) => state.location.pathname });
+  const showCustomCursor = !path.startsWith("/app");
 
   return (
     <QueryClientProvider client={queryClient}>
       <Outlet />
-      <BeaconCursor />
+      <Toaster position="top-right" richColors closeButton />
+      {showCustomCursor && <BeaconCursor />}
     </QueryClientProvider>
   );
 }

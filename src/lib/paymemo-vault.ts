@@ -1,9 +1,20 @@
 import type { EncryptedMetadata } from "./crypto-vault";
+import { getVaultAuthHeaders } from "./crypto-vault";
 import type { PayMemoRecord, PayMemoRecordInput } from "./paymemo-schema";
 import { normalizeRecord } from "./paymemo-schema";
 
 const VAULT_KEY = "paymemo:vault:v1";
-const ENCRYPTED_VAULT_KEY = "paymemo:encrypted-vault:v1";
+const ENCRYPTED_VAULT_SESSION_KEY = "paymemo:encrypted-vault-session:v1";
+
+function clearPayMemoBrowserStorage() {
+  if (typeof window === "undefined") return;
+  for (const storage of [window.localStorage, window.sessionStorage]) {
+    const keys = Array.from({ length: storage.length }, (_, index) => storage.key(index)).filter(
+      (key): key is string => Boolean(key?.startsWith("paymemo:")),
+    );
+    keys.forEach((key) => storage.removeItem(key));
+  }
+}
 
 const PRIVATE_FIELDS = [
   "category",
@@ -100,7 +111,7 @@ export function toPublicRecord(record: PayMemoRecord): PublicPayMemoRecord {
 
 export function readEncryptedVaultRecords(): StoredVaultRecord[] {
   if (typeof window === "undefined") return [];
-  const raw = window.localStorage.getItem(ENCRYPTED_VAULT_KEY);
+  const raw = window.sessionStorage.getItem(ENCRYPTED_VAULT_SESSION_KEY);
   if (!raw) return [];
 
   try {
@@ -113,7 +124,7 @@ export function readEncryptedVaultRecords(): StoredVaultRecord[] {
 
 export function writeEncryptedVaultRecords(records: StoredVaultRecord[]) {
   if (typeof window === "undefined") return;
-  window.localStorage.setItem(ENCRYPTED_VAULT_KEY, JSON.stringify(records));
+  window.sessionStorage.setItem(ENCRYPTED_VAULT_SESSION_KEY, JSON.stringify(records));
 }
 
 export function saveEncryptedVaultRecord(record: StoredVaultRecord) {
@@ -125,7 +136,7 @@ export function saveEncryptedVaultRecord(record: StoredVaultRecord) {
 export async function syncEncryptedVaultRecord(record: StoredVaultRecord) {
   const response = await fetch("/api/vault-records", {
     method: "POST",
-    headers: { "content-type": "application/json" },
+    headers: { "content-type": "application/json", ...getVaultAuthHeaders() },
     body: JSON.stringify(record),
   });
 
@@ -136,6 +147,52 @@ export async function syncEncryptedVaultRecord(record: StoredVaultRecord) {
   return (await response.json()) as { ok: true; record: StoredVaultRecord };
 }
 
-export function exportEncryptedVaultJson() {
-  return JSON.stringify(readEncryptedVaultRecords(), null, 2);
+export async function fetchEncryptedVaultRecords(walletAddress: string) {
+  const response = await fetch(
+    `/api/vault-records?wallet=${encodeURIComponent(walletAddress.toLowerCase())}`,
+    { headers: getVaultAuthHeaders() },
+  );
+
+  if (!response.ok) {
+    throw new Error("Unable to load encrypted PayMemo records from the database.");
+  }
+
+  const payload = (await response.json()) as { ok: true; records: StoredVaultRecord[] };
+  writeEncryptedVaultRecords(payload.records);
+  return payload.records;
+}
+
+export async function deleteEncryptedVaultRecords(walletAddress: string) {
+  const response = await fetch(
+    `/api/vault-records?wallet=${encodeURIComponent(walletAddress.toLowerCase())}`,
+    { method: "DELETE", headers: getVaultAuthHeaders() },
+  );
+
+  if (!response.ok) {
+    throw new Error("Unable to delete encrypted PayMemo records from the database.");
+  }
+
+  writeEncryptedVaultRecords([]);
+  return (await response.json()) as { ok: true; deleted: true; remaining: StoredVaultRecord[] };
+}
+
+export async function deleteFullUserDatabase(walletAddress: string) {
+  const response = await fetch(
+    `/api/database-reset?wallet=${encodeURIComponent(walletAddress.toLowerCase())}`,
+    { method: "DELETE", headers: getVaultAuthHeaders() },
+  );
+
+  if (!response.ok) {
+    throw new Error("Unable to clear the full PayMemo database for this wallet.");
+  }
+
+  clearPayMemoBrowserStorage();
+  return (await response.json()) as { ok: true; deleted: true };
+}
+
+export async function exportEncryptedVaultJson(walletAddress?: string) {
+  const records = walletAddress
+    ? await fetchEncryptedVaultRecords(walletAddress)
+    : readEncryptedVaultRecords();
+  return JSON.stringify(records, null, 2);
 }

@@ -1,6 +1,66 @@
 -- PayMemo encrypted cloud sync schema.
 -- Private user metadata is stored only as encrypted blobs produced client-side.
 
+create table if not exists vault_records (
+  id text primary key,
+  wallet_address text not null,
+  public_record jsonb not null,
+  encrypted_metadata jsonb not null,
+  sync_status text not null default 'synced' check (
+    sync_status in ('local', 'synced', 'sync-failed')
+  ),
+  updated_at timestamptz not null default now()
+);
+
+create index if not exists vault_records_wallet_updated_idx
+  on vault_records (wallet_address, updated_at desc);
+
+create table if not exists extension_records (
+  id text primary key,
+  record jsonb not null,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create index if not exists extension_records_updated_idx
+  on extension_records (updated_at desc);
+
+create table if not exists extension_pairings (
+  install_token text not null,
+  wallet_address text not null,
+  created_at timestamptz not null default now(),
+  primary key (install_token, wallet_address)
+);
+
+create index if not exists extension_pairings_wallet_idx
+  on extension_pairings (wallet_address);
+
+create table if not exists agent_memory_records (
+  id text primary key,
+  record jsonb not null,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create index if not exists agent_memory_records_updated_idx
+  on agent_memory_records (updated_at desc);
+
+create table if not exists paymemo_domain_records (
+  id text primary key,
+  wallet_address text not null,
+  type text not null check (
+    type in ('invoice', 'batch-payout', 'agent-payment-intent')
+  ),
+  public_data jsonb not null,
+  encrypted_metadata jsonb not null,
+  status text not null,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create index if not exists paymemo_domain_records_wallet_type_updated_idx
+  on paymemo_domain_records (wallet_address, type, updated_at desc);
+
 create table if not exists users (
   wallet_address text primary key,
   created_at timestamptz not null default now()
@@ -116,3 +176,100 @@ create table if not exists linked_transactions (
   encrypted_metadata jsonb,
   created_at timestamptz not null default now()
 );
+
+-- RLS hardening.
+-- PayMemo currently reads/writes through server APIs using the Supabase service-role key.
+-- Enabling RLS blocks direct anon/client access to encrypted tables by default.
+-- The service-role key bypasses RLS server-side; keep it out of VITE_* env vars.
+
+alter table if exists vault_records enable row level security;
+alter table if exists extension_records enable row level security;
+alter table if exists agent_memory_records enable row level security;
+alter table if exists paymemo_domain_records enable row level security;
+alter table if exists users enable row level security;
+alter table if exists payment_intents enable row level security;
+alter table if exists transactions enable row level security;
+alter table if exists invoices enable row level security;
+alter table if exists counterparties enable row level security;
+alter table if exists batch_payouts enable row level security;
+alter table if exists batch_payout_items enable row level security;
+alter table if exists agent_payment_intents enable row level security;
+alter table if exists linked_transactions enable row level security;
+
+drop policy if exists "service role manages vault records" on vault_records;
+create policy "service role manages vault records"
+  on vault_records for all
+  using (auth.role() = 'service_role')
+  with check (auth.role() = 'service_role');
+
+drop policy if exists "service role manages extension records" on extension_records;
+create policy "service role manages extension records"
+  on extension_records for all
+  using (auth.role() = 'service_role')
+  with check (auth.role() = 'service_role');
+
+drop policy if exists "service role manages agent memory records" on agent_memory_records;
+create policy "service role manages agent memory records"
+  on agent_memory_records for all
+  using (auth.role() = 'service_role')
+  with check (auth.role() = 'service_role');
+
+drop policy if exists "service role manages domain records" on paymemo_domain_records;
+create policy "service role manages domain records"
+  on paymemo_domain_records for all
+  using (auth.role() = 'service_role')
+  with check (auth.role() = 'service_role');
+
+drop policy if exists "service role manages users" on users;
+create policy "service role manages users"
+  on users for all
+  using (auth.role() = 'service_role')
+  with check (auth.role() = 'service_role');
+
+drop policy if exists "service role manages payment intents" on payment_intents;
+create policy "service role manages payment intents"
+  on payment_intents for all
+  using (auth.role() = 'service_role')
+  with check (auth.role() = 'service_role');
+
+drop policy if exists "service role manages transactions" on transactions;
+create policy "service role manages transactions"
+  on transactions for all
+  using (auth.role() = 'service_role')
+  with check (auth.role() = 'service_role');
+
+drop policy if exists "service role manages invoices" on invoices;
+create policy "service role manages invoices"
+  on invoices for all
+  using (auth.role() = 'service_role')
+  with check (auth.role() = 'service_role');
+
+drop policy if exists "service role manages counterparties" on counterparties;
+create policy "service role manages counterparties"
+  on counterparties for all
+  using (auth.role() = 'service_role')
+  with check (auth.role() = 'service_role');
+
+drop policy if exists "service role manages batch payouts" on batch_payouts;
+create policy "service role manages batch payouts"
+  on batch_payouts for all
+  using (auth.role() = 'service_role')
+  with check (auth.role() = 'service_role');
+
+drop policy if exists "service role manages batch payout items" on batch_payout_items;
+create policy "service role manages batch payout items"
+  on batch_payout_items for all
+  using (auth.role() = 'service_role')
+  with check (auth.role() = 'service_role');
+
+drop policy if exists "service role manages agent payment intents" on agent_payment_intents;
+create policy "service role manages agent payment intents"
+  on agent_payment_intents for all
+  using (auth.role() = 'service_role')
+  with check (auth.role() = 'service_role');
+
+drop policy if exists "service role manages linked transactions" on linked_transactions;
+create policy "service role manages linked transactions"
+  on linked_transactions for all
+  using (auth.role() = 'service_role')
+  with check (auth.role() = 'service_role');

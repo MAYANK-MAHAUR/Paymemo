@@ -1,0 +1,73 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="stylesheet" href="popup.css" />
+  </head>
+  <body class="settings-page">
+    <main>
+      <header class="hero">
+        <div class="brand-row">
+          <div class="brand-lockup">
+            <span class="logo">P</span>
+            <div>
+              <p class="eyebrow">PayMemo settings</p>
+              <h1>Watched wallets</h1>
+            </div>
+          </div>
+        </div>
+        <p class="hero-copy">Configure wallet addresses PayMemo listens to for Morph transactions.</p>
+      </header>
+
+      <section class="settings chain-watch">
+        <div class="watch-head">
+          <div>
+            <span class="label">Morph chain watch</span>
+            <strong id="chainWatchText">Paused</strong>
+          </div>
+          <label class="switch">
+            <input id="chainWatchEnabled" type="checkbox" />
+            <span></span>
+          </label>
+        </div>
+        <label>
+          Watched wallet addresses
+          <textarea
+            id="watchedAddresses"
+            placeholder="Main wallet | 0x...&#10;Partner wallet | 0x...&#10;Vendor wallet | 0x..."
+          ></textarea>
+        </label>
+        <p class="mini-status">One wallet per line. Optional label before the address.</p>
+        <label class="checkline">
+          <input id="autoOpenChainWatchPrompt" type="checkbox" />
+          Auto-open info prompt when a watched wallet transacts
+        </label>
+      </section>
+
+      <section class="settings">
+        <label>
+          PayMemo app URL
+          <input id="appUrl" />
+        </label>
+        <label>
+          Morph RPC URL
+          <input id="rpcUrl" />
+        </label>
+      </section>
+
+      <div class="toolbar">
+        <button id="saveSettings" class="primary" type="button">Save wallet settings</button>
+        <button id="scanMorphNow" class="secondary" type="button">Scan now</button>
+      </div>
+
+      <div class="toolbar compact">
+        <button id="openSidePanel" class="secondary" type="button">Open side panel</button>
+        <button id="openReview" class="secondary" type="button">Open review</button>
+      </div>
+
+      <p id="settingsStatus" class="mini-status settings-status">Ready.</p>
+    </main>
+    <script src="settings.js"></script>
+  </body>
+</html>

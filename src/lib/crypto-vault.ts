@@ -1,4 +1,5 @@
-import { getEthereumProvider } from "./morph";
+import { getSelectedEthereumProvider } from "./morph";
+import { connectWallet } from "./morph";
 
 export const PAYMEMO_UNLOCK_MESSAGE =
   "Unlock PayMemo Vault\n\nThis signature derives your local encryption key. It does not send a transaction or grant spending permission.";
@@ -46,7 +47,7 @@ function requireBrowserCrypto() {
 }
 
 export async function signVaultUnlock(walletAddress: string) {
-  const ethereum = getEthereumProvider();
+  const ethereum = await getSelectedEthereumProvider();
   if (!ethereum) throw new Error("No browser wallet found.");
 
   return (await ethereum.request({
@@ -121,6 +122,16 @@ export function readVaultSession() {
   }
 }
 
+export function getVaultAuthHeaders(): Record<string, string> {
+  const session = readVaultSession();
+  if (!session) return {};
+
+  return {
+    "x-paymemo-wallet": session.walletAddress,
+    "x-paymemo-signature": session.signature,
+  };
+}
+
 export function clearVaultSession() {
   if (typeof window === "undefined") return;
   window.sessionStorage.removeItem(SESSION_KEY);
@@ -130,4 +141,30 @@ export async function getRememberedVaultKey() {
   const session = readVaultSession();
   if (!session) return null;
   return deriveVaultKey(session.signature, session.walletAddress);
+}
+
+export async function getRememberedVaultKeyFor(walletAddress: string) {
+  const session = readVaultSession();
+  if (!session) return null;
+  if (session.walletAddress.toLowerCase() !== walletAddress.toLowerCase()) return null;
+  return deriveVaultKey(session.signature, session.walletAddress);
+}
+
+export async function unlockVaultWithWallet() {
+  const existing = readVaultSession();
+  if (existing) {
+    return {
+      walletAddress: existing.walletAddress,
+      key: await deriveVaultKey(existing.signature, existing.walletAddress),
+    };
+  }
+
+  const walletAddress = await connectWallet();
+  const signature = await signVaultUnlock(walletAddress);
+  rememberVaultSession(walletAddress, signature);
+
+  return {
+    walletAddress,
+    key: await deriveVaultKey(signature, walletAddress),
+  };
 }

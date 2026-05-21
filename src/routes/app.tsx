@@ -1,8 +1,7 @@
 import { createFileRoute, Outlet } from "@tanstack/react-router";
 import { AppSidebar } from "@/components/app/Sidebar";
 import { Noise } from "@/components/fx/Noise";
-import { AppThemeProvider } from "@/lib/app-theme-provider";
-import { useAppTheme } from "@/lib/use-app-theme";
+import { useWalletAccountWatcher } from "@/lib/wallet-watcher";
 
 export const Route = createFileRoute("/app")({
   head: () => ({
@@ -11,22 +10,13 @@ export const Route = createFileRoute("/app")({
       { name: "description", content: "Private, verified stablecoin payment records." },
     ],
   }),
-  component: AppLayout,
+  component: AppShell,
 });
 
-function AppLayout() {
-  return (
-    <AppThemeProvider>
-      <AppShell />
-    </AppThemeProvider>
-  );
-}
-
 function AppShell() {
-  const { isDark } = useAppTheme();
-
+  useWalletAccountWatcher();
   return (
-    <div className={`relative min-h-screen flex bg-background ${isDark ? "dark" : ""}`}>
+    <div className="relative flex min-h-screen bg-background">
       <Noise opacity={0.04} />
       <div className="pointer-events-none absolute inset-0 grid-bg opacity-[0.25]" />
       <AppSidebar />

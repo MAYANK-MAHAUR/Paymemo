@@ -1,10 +1,21 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { Topbar } from "@/components/app/Topbar";
 import { StatusBadge } from "@/components/app/StatusBadge";
-import { transactions } from "@/lib/mock-data";
-import { decryptPrivateMetadata, getRememberedVaultKey } from "@/lib/crypto-vault";
-import { readEncryptedVaultRecords } from "@/lib/paymemo-vault";
-import { Search, Calendar, Filter, Download } from "lucide-react";
+import { EditRecordModal, type EditableRecord } from "@/components/app/EditRecordModal";
+import {
+  decryptPrivateMetadata,
+  encryptPrivateMetadata,
+  getRememberedVaultKey,
+  readVaultSession,
+} from "@/lib/crypto-vault";
+import {
+  fetchEncryptedVaultRecords,
+  readEncryptedVaultRecords,
+  saveEncryptedVaultRecord,
+  syncEncryptedVaultRecord,
+  type StoredVaultRecord,
+} from "@/lib/paymemo-vault";
+import { Pencil, Search, Calendar, Filter, Download } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
 export const Route = createFileRoute("/app/ledger")({
@@ -21,8 +32,10 @@ type LedgerRow = {
   category: string;
   counterparty: string;
   note: string;
+  project: string;
   status: string;
-  source: "mock" | "vault";
+  source: "vault";
+  raw?: StoredVaultRecord;
 };
 
 const cats = [
@@ -42,7 +55,7 @@ const cats = [
   "API Payment",
   "Agent Task Payment",
 ];
-const statuses = ["All", "Confirmed", "Pending", "Failed", "Needs Review", "confirmed"];
+const statuses = ["All", "confirmed", "pending_signature", "pending_chain", "failed", "needs-review", "rejected"];
 
 function downloadCsv(rows: LedgerRow[]) {
   const csvRows = [
@@ -85,84 +98,124 @@ function Ledger() {
   const [status, setStatus] = useState("All");
   const [q, setQ] = useState("");
   const [vaultRows, setVaultRows] = useState<LedgerRow[]>([]);
+  const [editing, setEditing] = useState<LedgerRow | null>(null);
+  const [saveStatus, setSaveStatus] = useState("");
 
-  useEffect(() => {
-    let alive = true;
+  async function loadVaultRows() {
+    const key = await getRememberedVaultKey();
+    const session = readVaultSession();
+    const records = session
+      ? await fetchEncryptedVaultRecords(session.walletAddress).catch(() =>
+          readEncryptedVaultRecords(),
+        )
+      : readEncryptedVaultRecords();
 
-    async function loadVaultRows() {
-      const key = await getRememberedVaultKey();
-      const records = readEncryptedVaultRecords();
+    if (!key) {
+      const lockedRows: LedgerRow[] = records.map((record) => ({
+        id: record.id,
+        date: new Date(record.publicRecord.createdAt ?? record.updatedAt).toLocaleDateString(),
+        hash: record.publicRecord.txHash ?? "pending",
+        amount: record.publicRecord.amount,
+        token: record.publicRecord.token,
+        category: "Encrypted",
+        counterparty: "Unlock vault",
+        note: "Private metadata is encrypted on this device.",
+        project: "",
+        status: record.publicRecord.status,
+        source: "vault",
+        raw: record,
+      }));
+      setVaultRows(lockedRows);
+      return;
+    }
 
-      if (!key) {
-        const lockedRows = records.map((record) => ({
+    const decryptedRows = await Promise.all(
+      records.map(async (record) => {
+        const metadata = await decryptPrivateMetadata<Record<string, string>>(
+          record.encryptedMetadata,
+          key,
+        );
+        return {
           id: record.id,
           date: new Date(record.publicRecord.createdAt ?? record.updatedAt).toLocaleDateString(),
           hash: record.publicRecord.txHash ?? "pending",
           amount: record.publicRecord.amount,
           token: record.publicRecord.token,
-          category: "Encrypted",
-          counterparty: "Unlock vault",
-          note: "Private metadata is encrypted on this device.",
+          category: metadata.category || "Other",
+          counterparty: metadata.counterparty || "Unknown",
+          note: metadata.note || "",
+          project: metadata.project || "",
           status: record.publicRecord.status,
           source: "vault" as const,
-        }));
-        if (alive) setVaultRows(lockedRows);
-        return;
-      }
+          raw: record,
+        };
+      }),
+    );
 
-      const decryptedRows = await Promise.all(
-        records.map(async (record) => {
-          const metadata = await decryptPrivateMetadata<Record<string, string>>(
-            record.encryptedMetadata,
-            key,
-          );
-          return {
-            id: record.id,
-            date: new Date(record.publicRecord.createdAt ?? record.updatedAt).toLocaleDateString(),
-            hash: record.publicRecord.txHash ?? "pending",
-            amount: record.publicRecord.amount,
-            token: record.publicRecord.token,
-            category: metadata.category || "Other",
-            counterparty: metadata.counterparty || "Unknown",
-            note: metadata.note || "",
-            status: record.publicRecord.status,
-            source: "vault" as const,
-          };
-        }),
-      );
+    setVaultRows(decryptedRows);
+  }
 
-      if (alive) setVaultRows(decryptedRows);
-    }
-
-    void loadVaultRows();
+  useEffect(() => {
+    let alive = true;
+    void (async () => {
+      await loadVaultRows();
+      if (!alive) return;
+    })();
 
     return () => {
       alive = false;
     };
   }, []);
 
-  const allRows = useMemo<LedgerRow[]>(
-    () => [
-      ...vaultRows,
-      ...transactions.map((t) => ({
-        id: t.id,
-        date: t.date,
-        hash: t.hash,
-        amount: String(t.amount),
-        token: t.token,
-        category: t.category,
-        counterparty: t.counterparty,
-        note: t.note,
-        status: t.status,
-        source: "mock" as const,
-      })),
-    ],
-    [vaultRows],
-  );
+  async function saveLedgerEdit(patch: EditableRecord) {
+    const session = readVaultSession();
+    const key = await getRememberedVaultKey();
+    if (!session || !key) throw new Error("Please connect wallet before continuing.");
+
+    const target = vaultRows.find((row) => row.id === patch.id);
+    if (!target?.raw) throw new Error("Ledger record not found.");
+
+    const existing = await decryptPrivateMetadata<Record<string, string>>(
+      target.raw.encryptedMetadata,
+      key,
+    ).catch(() => ({}) as Record<string, string>);
+
+    const nextMetadata = {
+      ...existing,
+      category: patch.category,
+      counterparty: patch.counterparty,
+      note: patch.note,
+      project: patch.project,
+    };
+
+    const encryptedMetadata = await encryptPrivateMetadata(
+      nextMetadata,
+      key,
+      session.walletAddress,
+    );
+
+    const updated: StoredVaultRecord = {
+      ...target.raw,
+      encryptedMetadata,
+      syncStatus: "local",
+      updatedAt: new Date().toISOString(),
+    };
+
+    saveEncryptedVaultRecord(updated);
+    try {
+      const synced = await syncEncryptedVaultRecord(updated);
+      saveEncryptedVaultRecord({ ...synced.record, syncStatus: "synced" });
+    } catch {
+      saveEncryptedVaultRecord({ ...updated, syncStatus: "sync-failed" });
+    }
+
+    setSaveStatus("Saved. Encrypted update synced to the database.");
+    await loadVaultRows();
+  }
 
   const rows = useMemo(
     () =>
-      allRows.filter(
+      vaultRows.filter(
         (t) =>
           (cat === "All" || t.category === cat) &&
           (status === "All" || t.status === status) &&
@@ -171,7 +224,7 @@ function Ledger() {
             t.note.toLowerCase().includes(q.toLowerCase()) ||
             t.hash.includes(q)),
       ),
-    [allRows, cat, status, q],
+    [vaultRows, cat, status, q],
   );
 
   return (
@@ -214,6 +267,11 @@ function Ledger() {
         </div>
 
         <div className="rounded-3xl border border-ink/35 bg-white shadow-soft overflow-hidden">
+          {saveStatus && (
+            <div className="border-b border-ink/15 bg-mint/10 px-5 py-2 text-xs font-semibold text-ink">
+              {saveStatus}
+            </div>
+          )}
           <table className="w-full text-sm">
             <thead>
               <tr className="text-[10px] uppercase tracking-widest text-ink/50 bg-cream/60">
@@ -225,8 +283,9 @@ function Ledger() {
                   "Counterparty",
                   "Private note",
                   "Status",
-                ].map((h) => (
-                  <th key={h} className="text-left font-medium px-5 py-3">
+                  "",
+                ].map((h, index) => (
+                  <th key={`${h}-${index}`} className="text-left font-medium px-5 py-3">
                     {h}
                   </th>
                 ))}
@@ -253,11 +312,22 @@ function Ledger() {
                   <td className="px-5 py-3.5">
                     <StatusBadge status={t.status} />
                   </td>
+                  <td className="px-5 py-3.5 text-right">
+                    <button
+                      type="button"
+                      onClick={() => setEditing(t)}
+                      className="inline-flex items-center gap-1 rounded-lg border border-ink/25 px-2 py-1 text-xs font-semibold text-ink/70 hover:text-ink"
+                      disabled={t.category === "Encrypted"}
+                      title={t.category === "Encrypted" ? "Unlock vault to edit" : "Edit record"}
+                    >
+                      <Pencil className="h-3 w-3" /> Edit
+                    </button>
+                  </td>
                 </tr>
               ))}
               {rows.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="px-5 py-16 text-center text-ink/50">
+                  <td colSpan={8} className="px-5 py-16 text-center text-ink/50">
                     No records match your filters.
                   </td>
                 </tr>
@@ -266,6 +336,24 @@ function Ledger() {
           </table>
         </div>
       </div>
+
+      <EditRecordModal
+        open={Boolean(editing)}
+        initial={
+          editing
+            ? {
+                id: editing.id,
+                category: editing.category,
+                counterparty: editing.counterparty,
+                note: editing.note,
+                project: editing.project,
+                status: editing.status,
+              }
+            : null
+        }
+        onClose={() => setEditing(null)}
+        onSave={saveLedgerEdit}
+      />
     </>
   );
 }

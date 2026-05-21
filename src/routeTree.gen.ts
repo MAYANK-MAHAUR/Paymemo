@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as AppRouteImport } from './routes/app'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AppIndexRouteImport } from './routes/app.index'
+import { Route as PayInvoiceIdRouteImport } from './routes/pay.$invoiceId'
 import { Route as AppSettingsRouteImport } from './routes/app.settings'
 import { Route as AppSendRouteImport } from './routes/app.send'
 import { Route as AppReviewRouteImport } from './routes/app.review'
@@ -19,12 +20,20 @@ import { Route as AppReportsRouteImport } from './routes/app.reports'
 import { Route as AppMorphRouteImport } from './routes/app.morph'
 import { Route as AppLedgerRouteImport } from './routes/app.ledger'
 import { Route as AppInvoicesRouteImport } from './routes/app.invoices'
+import { Route as AppDocsRouteImport } from './routes/app.docs'
 import { Route as AppBatchRouteImport } from './routes/app.batch'
 import { Route as AppAssistRouteImport } from './routes/app.assist'
 import { Route as AppAgentsRouteImport } from './routes/app.agents'
 import { Route as ApiVaultRecordsRouteImport } from './routes/api.vault-records'
 import { Route as ApiRecordsRouteImport } from './routes/api.records'
+import { Route as ApiPublicInvoiceRouteImport } from './routes/api.public-invoice'
+import { Route as ApiInvoicesRouteImport } from './routes/api.invoices'
+import { Route as ApiInvoicePaymentRouteImport } from './routes/api.invoice-payment'
+import { Route as ApiExtensionPairRouteImport } from './routes/api.extension-pair'
 import { Route as ApiExtensionIntentRouteImport } from './routes/api.extension-intent'
+import { Route as ApiDatabaseResetRouteImport } from './routes/api.database-reset'
+import { Route as ApiBatchPayoutsRouteImport } from './routes/api.batch-payouts'
+import { Route as ApiAgentPaymentIntentRouteImport } from './routes/api.agent-payment-intent'
 import { Route as ApiAgentMemoryRouteImport } from './routes/api.agent-memory'
 
 const AppRoute = AppRouteImport.update({
@@ -41,6 +50,11 @@ const AppIndexRoute = AppIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => AppRoute,
+} as any)
+const PayInvoiceIdRoute = PayInvoiceIdRouteImport.update({
+  id: '/pay/$invoiceId',
+  path: '/pay/$invoiceId',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const AppSettingsRoute = AppSettingsRouteImport.update({
   id: '/settings',
@@ -77,6 +91,11 @@ const AppInvoicesRoute = AppInvoicesRouteImport.update({
   path: '/invoices',
   getParentRoute: () => AppRoute,
 } as any)
+const AppDocsRoute = AppDocsRouteImport.update({
+  id: '/docs',
+  path: '/docs',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppBatchRoute = AppBatchRouteImport.update({
   id: '/batch',
   path: '/batch',
@@ -102,9 +121,44 @@ const ApiRecordsRoute = ApiRecordsRouteImport.update({
   path: '/api/records',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicInvoiceRoute = ApiPublicInvoiceRouteImport.update({
+  id: '/api/public-invoice',
+  path: '/api/public-invoice',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiInvoicesRoute = ApiInvoicesRouteImport.update({
+  id: '/api/invoices',
+  path: '/api/invoices',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiInvoicePaymentRoute = ApiInvoicePaymentRouteImport.update({
+  id: '/api/invoice-payment',
+  path: '/api/invoice-payment',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiExtensionPairRoute = ApiExtensionPairRouteImport.update({
+  id: '/api/extension-pair',
+  path: '/api/extension-pair',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiExtensionIntentRoute = ApiExtensionIntentRouteImport.update({
   id: '/api/extension-intent',
   path: '/api/extension-intent',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiDatabaseResetRoute = ApiDatabaseResetRouteImport.update({
+  id: '/api/database-reset',
+  path: '/api/database-reset',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiBatchPayoutsRoute = ApiBatchPayoutsRouteImport.update({
+  id: '/api/batch-payouts',
+  path: '/api/batch-payouts',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAgentPaymentIntentRoute = ApiAgentPaymentIntentRouteImport.update({
+  id: '/api/agent-payment-intent',
+  path: '/api/agent-payment-intent',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiAgentMemoryRoute = ApiAgentMemoryRouteImport.update({
@@ -117,12 +171,20 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/app': typeof AppRouteWithChildren
   '/api/agent-memory': typeof ApiAgentMemoryRoute
+  '/api/agent-payment-intent': typeof ApiAgentPaymentIntentRoute
+  '/api/batch-payouts': typeof ApiBatchPayoutsRoute
+  '/api/database-reset': typeof ApiDatabaseResetRoute
   '/api/extension-intent': typeof ApiExtensionIntentRoute
+  '/api/extension-pair': typeof ApiExtensionPairRoute
+  '/api/invoice-payment': typeof ApiInvoicePaymentRoute
+  '/api/invoices': typeof ApiInvoicesRoute
+  '/api/public-invoice': typeof ApiPublicInvoiceRoute
   '/api/records': typeof ApiRecordsRoute
   '/api/vault-records': typeof ApiVaultRecordsRoute
   '/app/agents': typeof AppAgentsRoute
   '/app/assist': typeof AppAssistRoute
   '/app/batch': typeof AppBatchRoute
+  '/app/docs': typeof AppDocsRoute
   '/app/invoices': typeof AppInvoicesRoute
   '/app/ledger': typeof AppLedgerRoute
   '/app/morph': typeof AppMorphRoute
@@ -130,17 +192,26 @@ export interface FileRoutesByFullPath {
   '/app/review': typeof AppReviewRoute
   '/app/send': typeof AppSendRoute
   '/app/settings': typeof AppSettingsRoute
+  '/pay/$invoiceId': typeof PayInvoiceIdRoute
   '/app/': typeof AppIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/api/agent-memory': typeof ApiAgentMemoryRoute
+  '/api/agent-payment-intent': typeof ApiAgentPaymentIntentRoute
+  '/api/batch-payouts': typeof ApiBatchPayoutsRoute
+  '/api/database-reset': typeof ApiDatabaseResetRoute
   '/api/extension-intent': typeof ApiExtensionIntentRoute
+  '/api/extension-pair': typeof ApiExtensionPairRoute
+  '/api/invoice-payment': typeof ApiInvoicePaymentRoute
+  '/api/invoices': typeof ApiInvoicesRoute
+  '/api/public-invoice': typeof ApiPublicInvoiceRoute
   '/api/records': typeof ApiRecordsRoute
   '/api/vault-records': typeof ApiVaultRecordsRoute
   '/app/agents': typeof AppAgentsRoute
   '/app/assist': typeof AppAssistRoute
   '/app/batch': typeof AppBatchRoute
+  '/app/docs': typeof AppDocsRoute
   '/app/invoices': typeof AppInvoicesRoute
   '/app/ledger': typeof AppLedgerRoute
   '/app/morph': typeof AppMorphRoute
@@ -148,6 +219,7 @@ export interface FileRoutesByTo {
   '/app/review': typeof AppReviewRoute
   '/app/send': typeof AppSendRoute
   '/app/settings': typeof AppSettingsRoute
+  '/pay/$invoiceId': typeof PayInvoiceIdRoute
   '/app': typeof AppIndexRoute
 }
 export interface FileRoutesById {
@@ -155,12 +227,20 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/app': typeof AppRouteWithChildren
   '/api/agent-memory': typeof ApiAgentMemoryRoute
+  '/api/agent-payment-intent': typeof ApiAgentPaymentIntentRoute
+  '/api/batch-payouts': typeof ApiBatchPayoutsRoute
+  '/api/database-reset': typeof ApiDatabaseResetRoute
   '/api/extension-intent': typeof ApiExtensionIntentRoute
+  '/api/extension-pair': typeof ApiExtensionPairRoute
+  '/api/invoice-payment': typeof ApiInvoicePaymentRoute
+  '/api/invoices': typeof ApiInvoicesRoute
+  '/api/public-invoice': typeof ApiPublicInvoiceRoute
   '/api/records': typeof ApiRecordsRoute
   '/api/vault-records': typeof ApiVaultRecordsRoute
   '/app/agents': typeof AppAgentsRoute
   '/app/assist': typeof AppAssistRoute
   '/app/batch': typeof AppBatchRoute
+  '/app/docs': typeof AppDocsRoute
   '/app/invoices': typeof AppInvoicesRoute
   '/app/ledger': typeof AppLedgerRoute
   '/app/morph': typeof AppMorphRoute
@@ -168,6 +248,7 @@ export interface FileRoutesById {
   '/app/review': typeof AppReviewRoute
   '/app/send': typeof AppSendRoute
   '/app/settings': typeof AppSettingsRoute
+  '/pay/$invoiceId': typeof PayInvoiceIdRoute
   '/app/': typeof AppIndexRoute
 }
 export interface FileRouteTypes {
@@ -176,12 +257,20 @@ export interface FileRouteTypes {
     | '/'
     | '/app'
     | '/api/agent-memory'
+    | '/api/agent-payment-intent'
+    | '/api/batch-payouts'
+    | '/api/database-reset'
     | '/api/extension-intent'
+    | '/api/extension-pair'
+    | '/api/invoice-payment'
+    | '/api/invoices'
+    | '/api/public-invoice'
     | '/api/records'
     | '/api/vault-records'
     | '/app/agents'
     | '/app/assist'
     | '/app/batch'
+    | '/app/docs'
     | '/app/invoices'
     | '/app/ledger'
     | '/app/morph'
@@ -189,17 +278,26 @@ export interface FileRouteTypes {
     | '/app/review'
     | '/app/send'
     | '/app/settings'
+    | '/pay/$invoiceId'
     | '/app/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/api/agent-memory'
+    | '/api/agent-payment-intent'
+    | '/api/batch-payouts'
+    | '/api/database-reset'
     | '/api/extension-intent'
+    | '/api/extension-pair'
+    | '/api/invoice-payment'
+    | '/api/invoices'
+    | '/api/public-invoice'
     | '/api/records'
     | '/api/vault-records'
     | '/app/agents'
     | '/app/assist'
     | '/app/batch'
+    | '/app/docs'
     | '/app/invoices'
     | '/app/ledger'
     | '/app/morph'
@@ -207,18 +305,27 @@ export interface FileRouteTypes {
     | '/app/review'
     | '/app/send'
     | '/app/settings'
+    | '/pay/$invoiceId'
     | '/app'
   id:
     | '__root__'
     | '/'
     | '/app'
     | '/api/agent-memory'
+    | '/api/agent-payment-intent'
+    | '/api/batch-payouts'
+    | '/api/database-reset'
     | '/api/extension-intent'
+    | '/api/extension-pair'
+    | '/api/invoice-payment'
+    | '/api/invoices'
+    | '/api/public-invoice'
     | '/api/records'
     | '/api/vault-records'
     | '/app/agents'
     | '/app/assist'
     | '/app/batch'
+    | '/app/docs'
     | '/app/invoices'
     | '/app/ledger'
     | '/app/morph'
@@ -226,6 +333,7 @@ export interface FileRouteTypes {
     | '/app/review'
     | '/app/send'
     | '/app/settings'
+    | '/pay/$invoiceId'
     | '/app/'
   fileRoutesById: FileRoutesById
 }
@@ -233,9 +341,17 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AppRoute: typeof AppRouteWithChildren
   ApiAgentMemoryRoute: typeof ApiAgentMemoryRoute
+  ApiAgentPaymentIntentRoute: typeof ApiAgentPaymentIntentRoute
+  ApiBatchPayoutsRoute: typeof ApiBatchPayoutsRoute
+  ApiDatabaseResetRoute: typeof ApiDatabaseResetRoute
   ApiExtensionIntentRoute: typeof ApiExtensionIntentRoute
+  ApiExtensionPairRoute: typeof ApiExtensionPairRoute
+  ApiInvoicePaymentRoute: typeof ApiInvoicePaymentRoute
+  ApiInvoicesRoute: typeof ApiInvoicesRoute
+  ApiPublicInvoiceRoute: typeof ApiPublicInvoiceRoute
   ApiRecordsRoute: typeof ApiRecordsRoute
   ApiVaultRecordsRoute: typeof ApiVaultRecordsRoute
+  PayInvoiceIdRoute: typeof PayInvoiceIdRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -260,6 +376,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/app/'
       preLoaderRoute: typeof AppIndexRouteImport
       parentRoute: typeof AppRoute
+    }
+    '/pay/$invoiceId': {
+      id: '/pay/$invoiceId'
+      path: '/pay/$invoiceId'
+      fullPath: '/pay/$invoiceId'
+      preLoaderRoute: typeof PayInvoiceIdRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/app/settings': {
       id: '/app/settings'
@@ -310,6 +433,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppInvoicesRouteImport
       parentRoute: typeof AppRoute
     }
+    '/app/docs': {
+      id: '/app/docs'
+      path: '/docs'
+      fullPath: '/app/docs'
+      preLoaderRoute: typeof AppDocsRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/app/batch': {
       id: '/app/batch'
       path: '/batch'
@@ -345,11 +475,60 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiRecordsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public-invoice': {
+      id: '/api/public-invoice'
+      path: '/api/public-invoice'
+      fullPath: '/api/public-invoice'
+      preLoaderRoute: typeof ApiPublicInvoiceRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/invoices': {
+      id: '/api/invoices'
+      path: '/api/invoices'
+      fullPath: '/api/invoices'
+      preLoaderRoute: typeof ApiInvoicesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/invoice-payment': {
+      id: '/api/invoice-payment'
+      path: '/api/invoice-payment'
+      fullPath: '/api/invoice-payment'
+      preLoaderRoute: typeof ApiInvoicePaymentRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/extension-pair': {
+      id: '/api/extension-pair'
+      path: '/api/extension-pair'
+      fullPath: '/api/extension-pair'
+      preLoaderRoute: typeof ApiExtensionPairRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/extension-intent': {
       id: '/api/extension-intent'
       path: '/api/extension-intent'
       fullPath: '/api/extension-intent'
       preLoaderRoute: typeof ApiExtensionIntentRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/database-reset': {
+      id: '/api/database-reset'
+      path: '/api/database-reset'
+      fullPath: '/api/database-reset'
+      preLoaderRoute: typeof ApiDatabaseResetRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/batch-payouts': {
+      id: '/api/batch-payouts'
+      path: '/api/batch-payouts'
+      fullPath: '/api/batch-payouts'
+      preLoaderRoute: typeof ApiBatchPayoutsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/agent-payment-intent': {
+      id: '/api/agent-payment-intent'
+      path: '/api/agent-payment-intent'
+      fullPath: '/api/agent-payment-intent'
+      preLoaderRoute: typeof ApiAgentPaymentIntentRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/agent-memory': {
@@ -366,6 +545,7 @@ interface AppRouteChildren {
   AppAgentsRoute: typeof AppAgentsRoute
   AppAssistRoute: typeof AppAssistRoute
   AppBatchRoute: typeof AppBatchRoute
+  AppDocsRoute: typeof AppDocsRoute
   AppInvoicesRoute: typeof AppInvoicesRoute
   AppLedgerRoute: typeof AppLedgerRoute
   AppMorphRoute: typeof AppMorphRoute
@@ -380,6 +560,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppAgentsRoute: AppAgentsRoute,
   AppAssistRoute: AppAssistRoute,
   AppBatchRoute: AppBatchRoute,
+  AppDocsRoute: AppDocsRoute,
   AppInvoicesRoute: AppInvoicesRoute,
   AppLedgerRoute: AppLedgerRoute,
   AppMorphRoute: AppMorphRoute,
@@ -396,9 +577,17 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AppRoute: AppRouteWithChildren,
   ApiAgentMemoryRoute: ApiAgentMemoryRoute,
+  ApiAgentPaymentIntentRoute: ApiAgentPaymentIntentRoute,
+  ApiBatchPayoutsRoute: ApiBatchPayoutsRoute,
+  ApiDatabaseResetRoute: ApiDatabaseResetRoute,
   ApiExtensionIntentRoute: ApiExtensionIntentRoute,
+  ApiExtensionPairRoute: ApiExtensionPairRoute,
+  ApiInvoicePaymentRoute: ApiInvoicePaymentRoute,
+  ApiInvoicesRoute: ApiInvoicesRoute,
+  ApiPublicInvoiceRoute: ApiPublicInvoiceRoute,
   ApiRecordsRoute: ApiRecordsRoute,
   ApiVaultRecordsRoute: ApiVaultRecordsRoute,
+  PayInvoiceIdRoute: PayInvoiceIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

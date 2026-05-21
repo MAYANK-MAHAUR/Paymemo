@@ -8,10 +8,10 @@ const modes = [
     title: "dApp Mode",
     subtitle: "Pay directly inside PayMemo.",
     description:
-      "Send stablecoin payments straight from the PayMemo app. Before you sign, PayMemo asks what the payment is for - then verifies the transaction on-chain and saves a categorised record to your ledger.",
+      "Send testnet payments straight from the PayMemo app. PayMemo encrypts the private memo, submits the transaction, verifies it on-chain, and saves a categorized record to your ledger.",
     steps: [
-      { icon: MessageSquare, label: "App asks: what's this payment for?" },
-      { icon: ArrowRight, label: "You confirm and sign in PayMemo" },
+      { icon: MessageSquare, label: "Add memo and category in PayMemo" },
+      { icon: ArrowRight, label: "Connect wallet and sign on testnet" },
       { icon: ShieldCheck, label: "Tx verified & saved to ledger" },
     ],
     accent: "bg-pink",
@@ -23,11 +23,11 @@ const modes = [
     title: "Wallet-Assist / Extension Mode",
     subtitle: "Works with any dApp or wallet you already use.",
     description:
-      "Keep using MetaMask, Rabby, or any dApp. The PayMemo extension pops up before you sign and asks what the transaction is for. Once it confirms on-chain, the record is saved automatically to your private ledger.",
+      "Keep using Bitget, MetaMask, Trust Wallet, or any dApp. The PayMemo extension watches configured Morph wallet addresses and pops up after a matching transaction is detected so you can add the private reason.",
     steps: [
-      { icon: Puzzle, label: "Extension intercepts the sign request" },
-      { icon: MessageSquare, label: "Popup: what is this transaction for?" },
-      { icon: ShieldCheck, label: "Auto-saved after on-chain confirm" },
+      { icon: Puzzle, label: "Extension listens to watched wallets" },
+      { icon: MessageSquare, label: "Popup: what was this transaction for?" },
+      { icon: ShieldCheck, label: "Saved to Review after sync" },
     ],
     accent: "bg-papaya",
     glow: "shadow-glow-papaya",
@@ -47,9 +47,8 @@ export function Modes() {
             <span className="font-serif-italic">meaning</span> to a transaction.
           </h2>
           <p className="mt-5 text-lg text-ink/65 leading-relaxed">
-            Pay inside PayMemo, or let the extension ride along with the wallets
-            and dApps you already use. Either way, every signed transaction
-            ends up tagged, verified, and remembered.
+            Pay inside PayMemo, or let the extension watch the wallets and dApps you already use.
+            Either way, every detected transaction can be reviewed, tagged, verified, and remembered.
           </p>
         </div>
 

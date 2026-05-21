@@ -1,26 +1,135 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { Topbar } from "@/components/app/Topbar";
-import { ShieldCheck, Wallet, Download, Trash2, KeyRound } from "lucide-react";
+import { WalletConnectModal } from "@/components/app/WalletConnectModal";
+import { clearVaultSession, readVaultSession } from "@/lib/crypto-vault";
+import {
+  deleteEncryptedVaultRecords,
+  deleteFullUserDatabase,
+  exportEncryptedVaultJson,
+  fetchEncryptedVaultRecords,
+} from "@/lib/paymemo-vault";
+import { morphHoodi, shortAddress } from "@/lib/morph";
+import { clearWalletDataFromExtension } from "@/lib/watched-wallets";
+import { Database, Download, KeyRound, RefreshCw, ShieldCheck, Trash2, Wallet } from "lucide-react";
+import { useEffect, useState } from "react";
+import { notify } from "@/lib/notify";
 
 export const Route = createFileRoute("/app/settings")({
-  head: () => ({ meta: [{ title: "Settings · PayMemo" }] }),
+  head: () => ({ meta: [{ title: "Settings | PayMemo" }] }),
   component: Settings,
 });
 
 function Settings() {
+  const [walletAddress, setWalletAddress] = useState("");
+  const [recordCount, setRecordCount] = useState(0);
+  const [lastSync, setLastSync] = useState("Not synced yet");
+  const [message, setMessage] = useState("Encrypted records are stored in the PayMemo database.");
+  const [walletPickerOpen, setWalletPickerOpen] = useState(false);
+
+  const loadRecords = async (wallet = walletAddress) => {
+    if (!wallet) {
+      setMessage("Connect or unlock your vault to load database records.");
+      return;
+    }
+
+    try {
+      const records = await fetchEncryptedVaultRecords(wallet);
+      setRecordCount(records.length);
+      setLastSync(new Date().toLocaleString());
+      setMessage("Loaded encrypted records from the database.");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Unable to load database records.");
+    }
+  };
+
+  useEffect(() => {
+    const session = readVaultSession();
+    if (!session) return;
+    setWalletAddress(session.walletAddress);
+    void loadRecords(session.walletAddress);
+  }, []);
+
+  const connectForSettings = () => {
+    setMessage("Please connect wallet before continuing.");
+    setWalletPickerOpen(true);
+  };
+
+  const downloadEncryptedBackup = async () => {
+    if (!walletAddress) {
+      setMessage("Please connect wallet before continuing.");
+      setWalletPickerOpen(true);
+      return;
+    }
+
+    const json = await exportEncryptedVaultJson(walletAddress);
+    const url = URL.createObjectURL(new Blob([json], { type: "application/json" }));
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = `paymemo-encrypted-vault-${walletAddress.slice(0, 8)}.json`;
+    anchor.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const deleteServerVault = async () => {
+    if (!walletAddress) {
+      setMessage("Please connect wallet before continuing.");
+      setWalletPickerOpen(true);
+      notify.walletRequired();
+      return;
+    }
+
+    await deleteEncryptedVaultRecords(walletAddress);
+    setRecordCount(0);
+    setLastSync(new Date().toLocaleString());
+    setMessage("Encrypted database records deleted for this wallet.");
+    notify.success("Vault deleted", "All encrypted vault records for this wallet are removed.");
+  };
+
+  const clearFullDatabase = async () => {
+    if (!walletAddress) {
+      setMessage("Please connect wallet before continuing.");
+      setWalletPickerOpen(true);
+      notify.walletRequired();
+      return;
+    }
+
+    const typed = window.prompt(
+      `This deletes all stored PayMemo data for ${walletAddress}: send/vault records, Review, Wallet Assist, invoices, batch payouts, agent payment intents, and extension records. Onchain transactions stay public. Type DELETE to continue.`,
+    );
+    if (typed !== "DELETE") {
+      setMessage("Full database clear cancelled.");
+      notify.info("Cancelled", "Full database clear cancelled.");
+      return;
+    }
+
+    try {
+      await deleteFullUserDatabase(walletAddress);
+      clearWalletDataFromExtension(walletAddress);
+      clearVaultSession();
+      setRecordCount(0);
+      setLastSync(new Date().toLocaleString());
+      setMessage("Full PayMemo database cleared for this wallet. Reconnect to start fresh.");
+      notify.success("Database cleared", "All PayMemo data for this wallet has been removed.");
+    } catch (error) {
+      const text = error instanceof Error ? error.message : "Unable to clear the full database.";
+      setMessage(text);
+      notify.error("Clear failed", text);
+    }
+  };
+
   return (
     <>
       <Topbar title="Settings" subtitle="Manage your wallet, vault, and encrypted records." />
-      <div className="p-6 lg:p-10 grid lg:grid-cols-2 gap-5">
+      <div className="grid gap-5 p-6 lg:grid-cols-2 lg:p-10">
         <Card
           icon={<Wallet className="h-5 w-5" />}
           title="Connected wallet"
           hue="bg-pink/10 text-pink"
         >
-          <Row k="Address" v="0xVault…3e2" mono />
-          <Row k="Network" v="Morph Hoodi · 2910" />
-          <Row k="Balance" v="$48,210 USDC" mono />
-          <Btn>Disconnect</Btn>
+          <Row k="Address" v={walletAddress ? shortAddress(walletAddress) : "Not connected"} mono />
+          <Row k="Network" v={`${morphHoodi.name} - ${morphHoodi.chainId}`} />
+          <Row k="Identity" v="Wallet-only access" />
+          <Btn onClick={connectForSettings}>Connect wallet</Btn>
         </Card>
 
         <Card
@@ -28,10 +137,12 @@ function Settings() {
           title="Vault status"
           hue="bg-mint/10 text-mint"
         >
-          <Row k="Status" v="Unlocked" />
-          <Row k="Records" v="412 entries" />
-          <Row k="Last sync" v="2 minutes ago" />
-          <Btn>Lock vault</Btn>
+          <Row k="Status" v={readVaultSession() ? "Unlocked in this tab" : "Locked"} />
+          <Row k="Database records" v={`${recordCount} encrypted entries`} />
+          <Row k="Last sync" v={lastSync} />
+          <Btn onClick={() => void loadRecords()}>
+            <RefreshCw className="h-3.5 w-3.5" /> Refresh database
+          </Btn>
         </Card>
 
         <Card
@@ -41,35 +152,57 @@ function Settings() {
         >
           <Row k="Algorithm" v="AES-256-GCM" />
           <Row k="Key derivation" v="Wallet signature" />
-          <Row k="Key rotation" v="Every 90 days" />
-          <Btn>Rotate keys now</Btn>
+          <Row k="Plaintext storage" v="Never for private fields" />
+          <p className="text-xs text-ink/55">
+            Notes, labels, invoices, and agent reasons are encrypted before reaching the database.
+          </p>
         </Card>
 
         <Card
-          icon={<Download className="h-5 w-5" />}
-          title="Export backup"
+          icon={<Database className="h-5 w-5" />}
+          title="Database sync"
           hue="bg-ink/10 text-ink"
         >
-          <Row k="Format" v="JSON · encrypted" />
-          <Row k="Includes" v="All ledger + invoices" />
-          <p className="text-xs text-ink/55">
-            Backup is encrypted with your wallet - only you can restore it.
-          </p>
-          <Btn>Download backup</Btn>
+          <Row k="Backend" v="PayMemo encrypted database" />
+          <Row k="Sensitive fields" v="Ciphertext only" />
+          <Row k="Browser storage" v="Session cache only" />
+          <p className="text-xs font-semibold text-red-900">{message}</p>
+          <Btn onClick={downloadEncryptedBackup}>
+            <Download className="h-3.5 w-3.5" /> Download encrypted backup
+          </Btn>
         </Card>
 
-        <div className="lg:col-span-2 rounded-3xl border border-destructive/30 bg-white p-6 shadow-soft">
-          <div className="flex items-center gap-2 text-destructive font-semibold">
-            <Trash2 className="h-4 w-4" /> Delete encrypted records
+        <div className="rounded-3xl border border-destructive/30 bg-white p-6 shadow-soft lg:col-span-2">
+          <div className="flex items-center gap-2 font-semibold text-destructive">
+            <Trash2 className="h-4 w-4" /> Delete stored data
           </div>
           <p className="mt-2 text-sm text-ink/60">
-            This permanently removes your vault from PayMemo servers. Onchain transactions remain.
-            This action cannot be undone.
+            Delete either the encrypted vault records or every PayMemo database record owned by the
+            connected wallet. Onchain transactions remain public on Morph.
           </p>
-          <button className="mt-4 inline-flex items-center gap-2 rounded-xl border border-destructive/40 text-destructive px-4 py-2 text-sm font-semibold hover:bg-destructive hover:text-cream transition-colors">
-            Permanently delete vault
-          </button>
+          <div className="mt-4 flex flex-wrap gap-3">
+            <button
+              onClick={deleteServerVault}
+              className="inline-flex items-center gap-2 rounded-xl border border-destructive/40 px-4 py-2 text-sm font-semibold text-destructive transition-colors hover:bg-destructive hover:text-cream"
+            >
+              Delete vault only
+            </button>
+            <button
+              onClick={clearFullDatabase}
+              className="inline-flex items-center gap-2 rounded-xl bg-destructive px-4 py-2 text-sm font-semibold text-cream transition-colors hover:bg-destructive/85"
+            >
+              Clear full stored database
+            </button>
+          </div>
         </div>
+        <WalletConnectModal
+          open={walletPickerOpen}
+          onClose={() => setWalletPickerOpen(false)}
+          onConnected={async (account) => {
+            setWalletAddress(account);
+            await loadRecords(account);
+          }}
+        />
       </div>
     </>
   );
@@ -87,7 +220,7 @@ function Card({
   children: React.ReactNode;
 }) {
   return (
-    <div className="rounded-3xl border border-ink/35 bg-white p-6 shadow-soft space-y-3">
+    <div className="space-y-3 rounded-3xl border border-ink/35 bg-white p-6 shadow-soft">
       <div className="flex items-center gap-3">
         <span className={`grid h-10 w-10 place-items-center rounded-xl ${hue}`}>{icon}</span>
         <div className="text-base font-semibold">{title}</div>
@@ -96,17 +229,22 @@ function Card({
     </div>
   );
 }
+
 function Row({ k, v, mono }: { k: string; v: string; mono?: boolean }) {
   return (
-    <div className="flex items-center justify-between text-sm border-b border-ink/30 pb-2">
+    <div className="flex items-center justify-between gap-4 border-b border-ink/30 pb-2 text-sm">
       <span className="text-ink/55">{k}</span>
-      <span className={mono ? "font-mono" : ""}>{v}</span>
+      <span className={`text-right ${mono ? "font-mono" : ""}`}>{v}</span>
     </div>
   );
 }
-function Btn({ children }: { children: React.ReactNode }) {
+
+function Btn({ children, onClick }: { children: React.ReactNode; onClick?: () => void }) {
   return (
-    <button className="inline-flex rounded-xl bg-ink text-cream px-3 py-2 text-sm font-semibold hover:bg-ink/85">
+    <button
+      onClick={onClick}
+      className="inline-flex items-center gap-2 rounded-xl bg-ink px-3 py-2 text-sm font-semibold text-cream hover:bg-ink/85"
+    >
       {children}
     </button>
   );

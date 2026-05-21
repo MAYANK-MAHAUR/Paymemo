@@ -42,10 +42,9 @@ export function Hero() {
           className="font-body-alt mx-auto mt-10 max-w-[60ch] text-base sm:text-lg text-white/70 leading-relaxed"
         >
           PayMemo is the private memory layer for every wallet · human or AI agent.
-          We intercept the moment before you sign, ask{" "}
-          <em className="font-serif-italic text-white/90">what is this for</em>,
-          and turn raw on-chain noise into payroll, invoices, agent spend, and
-          tax-ready records.
+          It listens for supported Morph transactions, pops up after a payment is detected,
+          asks <em className="font-serif-italic text-white/90">what was this for</em>,
+          and turns raw on-chain activity into payroll, invoices, agent spend, and tax-ready records.
         </motion.p>
 
         <motion.div
@@ -83,7 +82,7 @@ export function Hero() {
             data-cursor-label="watch"
             className="inline-flex items-center gap-2 rounded-full border border-white/30 px-7 py-3.5 text-sm font-semibold uppercase tracking-[0.18em] text-white/85 hover:border-white/70 transition-colors"
           >
-            <Play className="h-4 w-4" /> Watch the intercept
+            <Play className="h-4 w-4" /> Watch detection
           </a>
         </motion.div>
 
@@ -130,4 +129,3 @@ function HeroBackdrop() {
     </div>
   );
 }
-

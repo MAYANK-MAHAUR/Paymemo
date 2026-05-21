@@ -28,6 +28,11 @@ const categories = [
   "Other",
 ];
 
+const morphKnownTokens = {
+  "0x1178341838b764dcffa5bceab1d41443fd71a227": { symbol: "USDC", decimals: 6 },
+  "0x5300000000000000000000000000000000000011": { symbol: "WETH", decimals: 18 },
+};
+
 function escapeHtml(value) {
   return String(value || "")
     .replaceAll("&", "&amp;")
@@ -56,28 +61,73 @@ function hexWeiToEth(value) {
   }
 }
 
+function formatUnitsFromHex(hexValue, decimals) {
+  if (!hexValue || typeof hexValue !== "string") return "";
+  try {
+    const units = BigInt(hexValue.startsWith("0x") ? hexValue : `0x${hexValue}`);
+    const scale = 10n ** BigInt(decimals);
+    const whole = units / scale;
+    const fraction = (units % scale).toString().padStart(decimals, "0").slice(0, 6);
+    return `${whole}.${fraction}`.replace(/\.?0+$/, "") || "0";
+  } catch {
+    return "";
+  }
+}
+
+function decodeErc20Transfer(tx) {
+  const data = String(tx.data || "");
+  const token = morphKnownTokens[String(tx.to || "").toLowerCase()];
+  if (!token || !data.startsWith("0xa9059cbb") || data.length < 138) return null;
+  const recipientHex = data.slice(34, 74);
+  const amountHex = data.slice(74, 138);
+  const recipient = `0x${recipientHex.slice(-40)}`;
+  const amount = formatUnitsFromHex(amountHex, token.decimals);
+  return {
+    to: recipient,
+    amount: amount ? `${amount} ${token.symbol}` : "",
+    token: token.symbol,
+    tokenContract: tx.to,
+  };
+}
+
 function parseTx(payload) {
+  if (!payload) {
+    return {
+      provider: "unknown",
+      to: "",
+      from: "",
+      amount: "",
+      token: "ETH",
+      method: "",
+      rawValue: "",
+      tokenContract: "",
+      data: "",
+    };
+  }
+
   const tx = Array.isArray(payload.params) ? payload.params[0] || {} : {};
   const firstCall = Array.isArray(tx.calls) ? tx.calls[0] || {} : {};
   const to = tx.to || firstCall.to || "";
   const from = tx.from || payload.from || "";
   const rawValue = tx.value || firstCall.value || "";
   const ethAmount = hexWeiToEth(rawValue);
+  const erc20 = decodeErc20Transfer({ ...tx, to, data: tx.data || firstCall.data || "" });
 
   return {
     provider: payload.providerLabel || "injected wallet",
-    to,
+    to: erc20?.to || to,
     from,
-    amount: ethAmount ? `${ethAmount} ETH` : "",
-    token: "ETH",
+    amount: erc20?.amount || (ethAmount ? `${ethAmount} ETH` : ""),
+    token: erc20?.token || "ETH",
     method: payload.method,
     rawValue,
+    tokenContract: erc20?.tokenContract || "",
     data: tx.data || firstCall.data || "",
   };
 }
 
 function defaultCategory(payload, tx) {
-  const method = payload.method || "";
+  const method = payload?.method || "";
   if (method.includes("signTypedData")) return "Other";
   if (tx.data && tx.data !== "0x") return "Tool Usage";
   return "Vendor Payment";
@@ -85,7 +135,26 @@ function defaultCategory(payload, tx) {
 
 function sendRuntimeMessage(message) {
   return new Promise((resolve) => {
-    chrome.runtime.sendMessage(message, (response) => resolve(response || {}));
+    try {
+      if (!chrome?.runtime?.id) {
+        resolve({ ok: false, extensionUnavailable: true });
+        return;
+      }
+
+      chrome.runtime.sendMessage(message, (response) => {
+        if (chrome.runtime.lastError) {
+          resolve({ ok: false, extensionUnavailable: true, error: chrome.runtime.lastError.message });
+          return;
+        }
+        resolve(response || {});
+      });
+    } catch (error) {
+      resolve({
+        ok: false,
+        extensionUnavailable: true,
+        error: error instanceof Error ? error.message : "Extension context unavailable",
+      });
+    }
   });
 }
 
@@ -108,27 +177,29 @@ function renderOverlay(payload) {
           position: fixed;
           inset: 0;
           z-index: 2147483647;
-          display: grid;
-          place-items: center;
-          background:
-            radial-gradient(circle at 15% 20%, rgba(92,255,130,.24), transparent 30%),
-            radial-gradient(circle at 90% 80%, rgba(255,226,87,.18), transparent 30%),
-            rgba(7,8,11,.76);
+          display: block;
+          pointer-events: none;
+          background: rgba(7,8,11,.10);
           color: #f7f8f2;
           font-family: Geist, Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-          backdrop-filter: blur(12px);
+          backdrop-filter: none;
         }
         .panel {
-          width: min(520px, calc(100vw - 28px));
-          overflow: hidden;
+          position: fixed;
+          top: 18px;
+          right: 18px;
+          width: min(430px, calc(100vw - 24px));
+          max-height: calc(100vh - 36px);
+          overflow: auto;
+          pointer-events: auto;
           border: 1px solid rgba(255,255,255,.12);
-          border-radius: 28px;
-          background: rgba(17,19,25,.96);
-          box-shadow: 0 34px 95px rgba(0,0,0,.54);
+          border-radius: 22px;
+          background: rgba(12,14,19,.97);
+          box-shadow: 0 24px 70px rgba(0,0,0,.42);
         }
         .top {
           position: relative;
-          padding: 18px 20px 16px;
+          padding: 16px 17px 14px;
           background:
             linear-gradient(120deg, rgba(92,255,130,.26), rgba(11,11,15,.98)),
             #0b0b0f;
@@ -161,20 +232,20 @@ function renderOverlay(payload) {
           text-transform: uppercase;
           color: rgba(255,255,255,.72);
         }
-        h1 { margin: 4px 0 0; font-size: 21px; line-height: 1.14; letter-spacing: -0.01em; }
-        .body { padding: 20px; }
+        h1 { margin: 4px 0 0; font-size: 19px; line-height: 1.14; letter-spacing: -0.01em; }
+        .body { padding: 16px; }
         .summary {
           display: grid;
           grid-template-columns: 1fr 1fr;
           gap: 10px;
-          margin-bottom: 16px;
+          margin-bottom: 14px;
         }
         .cell {
           min-width: 0;
           border: 1px solid rgba(255,255,255,.10);
-          border-radius: 16px;
+          border-radius: 13px;
           background: rgba(255,255,255,.055);
-          padding: 11px 12px;
+          padding: 9px 10px;
         }
         .label {
           display: block;
@@ -200,7 +271,7 @@ function renderOverlay(payload) {
           border-radius: 999px;
           background: rgba(255,255,255,.075);
           color: rgba(247,248,242,.78);
-          padding: 8px 10px;
+          padding: 7px 9px;
           font: 800 11px/1 inherit;
           cursor: pointer;
         }
@@ -218,10 +289,10 @@ function renderOverlay(payload) {
           width: 100%;
           margin-top: 7px;
           border: 1px solid rgba(255,255,255,.11);
-          border-radius: 16px;
+          border-radius: 13px;
           background: rgba(0,0,0,.28);
           color: #f7f8f2;
-          padding: 12px 13px;
+          padding: 10px 11px;
           font: 13px/1.35 inherit;
           outline: none;
           box-shadow: inset 0 0 0 1px transparent;
@@ -230,7 +301,7 @@ function renderOverlay(payload) {
           border-color: #5cff82;
           box-shadow: 0 0 0 3px rgba(92,255,130,.18);
         }
-        textarea { min-height: 78px; resize: vertical; }
+        textarea { min-height: 62px; resize: vertical; }
         .toggle-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
         .quick {
           border: 1px solid rgba(255,255,255,.11);
@@ -243,7 +314,7 @@ function renderOverlay(payload) {
         }
         .quick.active { background: rgba(92,255,130,.22); border-color: rgba(92,255,130,.45); }
         .lifecycle {
-          margin-top: 16px;
+          margin-top: 13px;
           display: grid;
           grid-template-columns: repeat(4, 1fr);
           gap: 8px;
@@ -255,17 +326,25 @@ function renderOverlay(payload) {
         }
         .life-dot { height: 4px; border-radius: 99px; background: rgba(255,255,255,.12); margin-bottom: 7px; }
         .life-dot.on { background: #5cff82; box-shadow: 0 0 18px rgba(92,255,130,.6); }
-        .actions { display: grid; grid-template-columns: 1fr 1.4fr; gap: 10px; margin-top: 18px; }
+        .actions { display: grid; grid-template-columns: 1fr 1.4fr; gap: 9px; margin-top: 14px; }
         button {
           border: 0;
-          border-radius: 16px;
-          padding: 13px 14px;
+          border-radius: 13px;
+          padding: 12px 12px;
           font: 900 13px/1 inherit;
           cursor: pointer;
         }
         .primary { background: #5cff82; color: #071009; box-shadow: 0 18px 45px rgba(92,255,130,.18); }
         .ghost { background: rgba(255,255,255,.08); color: rgba(247,248,242,.76); }
-        .hint { margin: 13px 0 0; color: rgba(247,248,242,.52); font-size: 11px; line-height: 1.45; }
+        .hint { margin: 11px 0 0; color: rgba(247,248,242,.52); font-size: 11px; line-height: 1.45; }
+        @media (max-width: 520px) {
+          .panel {
+            top: 10px;
+            right: 10px;
+            width: calc(100vw - 20px);
+          }
+          .summary { grid-template-columns: 1fr; }
+        }
       </style>
       <div class="wrap">
         <form class="panel">
@@ -394,6 +473,9 @@ function renderOverlay(payload) {
         token: tx.token,
         method: tx.method,
         rawValue: tx.rawValue,
+        callData: tx.data,
+        tokenContract: tx.tokenContract,
+        transactionType: tx.tokenContract ? "erc20" : tx.data && tx.data !== "0x" ? "contract-call" : "native",
         provider: tx.provider,
       });
     });
@@ -420,8 +502,59 @@ function extractTxHash(result) {
   return "";
 }
 
+const PAYMEMO_ALLOWED_HOSTS = new Set(["127.0.0.1", "localhost", "paymemo.app"]);
+
+function isAllowedPayMemoOrigin() {
+  if (typeof window === "undefined" || !window.location) return false;
+  if (window.top !== window.self) return false;
+  if (location.protocol !== "https:" && location.protocol !== "http:") return false;
+  if (location.protocol === "http:" && location.hostname !== "127.0.0.1" && location.hostname !== "localhost") {
+    return false;
+  }
+  return (
+    PAYMEMO_ALLOWED_HOSTS.has(location.hostname) ||
+    location.hostname.endsWith(".paymemo.app")
+  );
+}
+
 window.addEventListener("message", async (event) => {
   if (event.source !== window) return;
+  if (event.origin !== location.origin) return;
+
+  if (event.data?.type === "PAYMEMO_REQUEST_INSTALL_TOKEN") {
+    if (!isAllowedPayMemoOrigin()) return;
+    const response = await sendRuntimeMessage({ type: "PAYMEMO_GET_INSTALL_TOKEN" });
+    window.postMessage(
+      {
+        type: "PAYMEMO_INSTALL_TOKEN",
+        requestId: event.data.requestId,
+        token: response.token,
+        ok: Boolean(response.ok),
+      },
+      window.location.origin,
+    );
+    return;
+  }
+
+  if (event.data?.type === "PAYMEMO_SYNC_WATCHED_WALLETS_FROM_APP") {
+    if (!isAllowedPayMemoOrigin()) return;
+
+    await sendRuntimeMessage({
+      type: "PAYMEMO_MERGE_WATCHED_WALLETS",
+      wallets: event.data.wallets || [],
+    });
+    return;
+  }
+
+  if (event.data?.type === "PAYMEMO_CLEAR_WALLET_DATA_FROM_APP") {
+    if (!isAllowedPayMemoOrigin()) return;
+
+    await sendRuntimeMessage({
+      type: "PAYMEMO_CLEAR_WALLET_DATA",
+      wallet: event.data.wallet,
+    });
+    return;
+  }
 
   if (event.data?.type === "PAYMEMO_REQUEST_CONTEXT") {
     const record = await renderOverlay(event.data.payload);
@@ -446,7 +579,7 @@ window.addEventListener("message", async (event) => {
     const txHash = extractTxHash(result);
 
     if (txHash) {
-      chrome.runtime.sendMessage({
+      await sendRuntimeMessage({
         type: "PAYMEMO_TX_SUBMITTED",
         recordId: event.data.recordId,
         txHash,
@@ -455,7 +588,7 @@ window.addEventListener("message", async (event) => {
       return;
     }
 
-    chrome.runtime.sendMessage({
+    await sendRuntimeMessage({
       type: "PAYMEMO_SIGNED",
       recordId: event.data.recordId,
       method: event.data.method,
@@ -463,7 +596,7 @@ window.addEventListener("message", async (event) => {
   }
 
   if (event.data?.type === "PAYMEMO_REQUEST_ERROR") {
-    chrome.runtime.sendMessage({
+    await sendRuntimeMessage({
       type: "PAYMEMO_REJECTED",
       recordId: event.data.recordId,
       method: event.data.method,
@@ -500,12 +633,20 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
         id: record.id,
         patch: {
           ...captured,
-          status: record.status === "failed" ? "failed" : "needs-review",
+          status: record.status === "failed" ? "failed" : "confirmed",
           method: "morph-chain-watch",
           provider: "Morph Chain Watch",
           origin: record.origin || "Morph Hoodi chain watch",
+          reviewedAt: new Date().toISOString(),
         },
-      }).then((response) => {
+      }).then(async (response) => {
+        if (response.ok) {
+          await sendRuntimeMessage({
+            type: "PAYMEMO_SYNC_RECORD",
+            id: record.id,
+            removeLocal: true,
+          });
+        }
         sendResponse({ ok: Boolean(response.ok), record: response.record });
       });
     })

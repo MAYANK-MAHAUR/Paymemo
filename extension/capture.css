@@ -35,6 +35,33 @@ body {
     sans-serif;
 }
 
+body.sidepanel {
+  width: 100vw;
+  min-width: 320px;
+  min-height: 100vh;
+}
+
+body.sidepanel main {
+  min-height: 100vh;
+  padding: 10px;
+}
+
+body.sidepanel .shell {
+  min-height: calc(100vh - 20px);
+  max-height: calc(100vh - 20px);
+  border-radius: 22px;
+}
+
+@media (min-width: 700px) {
+  body {
+    width: 100vw;
+  }
+
+  main {
+    min-height: 100vh;
+  }
+}
+
 main {
   display: grid;
   max-height: 100vh;
@@ -49,6 +76,12 @@ main {
   border-radius: 28px;
   background: rgba(17, 19, 25, 0.94);
   box-shadow: 0 34px 90px rgba(0, 0, 0, 0.45);
+}
+
+.tx-card:first-child {
+  background:
+    linear-gradient(135deg, rgba(92, 255, 130, 0.1), transparent),
+    rgba(255, 255, 255, 0.045);
 }
 
 header {
@@ -193,6 +226,38 @@ h1 {
   margin-top: 11px;
 }
 
+.watch-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.watch-pill {
+  border: 1px solid rgba(92, 255, 130, 0.26);
+  border-radius: 999px;
+  background: rgba(92, 255, 130, 0.1);
+  color: rgba(247, 248, 242, 0.82);
+  padding: 6px 8px;
+  font-size: 10px;
+  font-weight: 900;
+}
+
+.watch-pill.muted {
+  border-color: var(--line);
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--muted);
+}
+
+.watch-form {
+  grid-template-columns: 1fr;
+}
+
+.panel-actions {
+  display: grid;
+  margin-top: 10px;
+}
+
 input,
 textarea {
   width: 100%;
@@ -257,4 +322,113 @@ button {
   color: rgba(247, 248, 242, 0.48);
   font-size: 11px;
   line-height: 1.45;
+}
+
+.status-line {
+  margin: 0 12px 12px;
+  border: 1px solid rgba(92, 255, 130, 0.22);
+  border-radius: 14px;
+  background: rgba(92, 255, 130, 0.1);
+  color: rgba(247, 248, 242, 0.78);
+  padding: 10px 11px;
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+/* Bright side panel / transaction prompt theme */
+:root {
+  color-scheme: light;
+  --bg: #f7f8f1;
+  --panel: #ffffff;
+  --panel-2: #f0f3ea;
+  --line: rgba(7, 10, 8, 0.14);
+  --text: #070a08;
+  --muted: rgba(7, 10, 8, 0.58);
+  --soft: rgba(7, 10, 8, 0.05);
+  --green: #29f46f;
+  --yellow: #b97900;
+  --red: #d92d54;
+}
+
+body {
+  background:
+    radial-gradient(circle at 0 0, rgba(41, 244, 111, 0.24), transparent 34%),
+    radial-gradient(circle at 100% 18%, rgba(7, 10, 8, 0.08), transparent 28%),
+    linear-gradient(180deg, #ffffff, var(--bg));
+  color: var(--text);
+}
+
+.shell,
+.tx-card,
+.meta div {
+  border-color: var(--line);
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: 0 18px 48px rgba(7, 10, 8, 0.08);
+}
+
+.tx-card:first-child {
+  background:
+    linear-gradient(135deg, rgba(41, 244, 111, 0.18), transparent),
+    rgba(255, 255, 255, 0.96);
+}
+
+header {
+  border-bottom-color: var(--line);
+  background:
+    linear-gradient(120deg, rgba(41, 244, 111, 0.2), transparent),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.94), transparent);
+}
+
+.logo {
+  border-color: rgba(7, 10, 8, 0.16);
+  background: #071009;
+  color: var(--green);
+}
+
+input,
+textarea {
+  border-color: var(--line);
+  background: rgba(255, 255, 255, 0.9);
+  color: var(--text);
+}
+
+.secondary {
+  border-color: var(--line);
+  background: #ffffff;
+  color: var(--text);
+}
+
+.primary,
+.chips button.active {
+  background: var(--green);
+  color: #071009;
+  box-shadow: 0 14px 30px rgba(41, 244, 111, 0.24);
+}
+
+.chips button,
+.watch-pill,
+.pill {
+  border-color: rgba(41, 244, 111, 0.32);
+  background: rgba(41, 244, 111, 0.13);
+  color: #071009;
+}
+
+.watch-pill.muted {
+  border-color: var(--line);
+  background: rgba(7, 10, 8, 0.04);
+  color: var(--muted);
+}
+
+.status-line {
+  border-color: rgba(41, 244, 111, 0.28);
+  background: rgba(41, 244, 111, 0.12);
+  color: rgba(7, 10, 8, 0.74);
+}
+
+.subtitle,
+.hint,
+.eyebrow,
+label,
+.mini-label {
+  color: var(--muted);
 }

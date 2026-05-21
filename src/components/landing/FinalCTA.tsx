@@ -18,7 +18,8 @@ export function FinalCTA() {
               Turn wallet activity into <span className="font-serif-italic">financial memory.</span>
             </h2>
             <p className="mt-6 text-ink/80 max-w-xl text-lg">
-              Wallets show what happened. PayMemo records why. Start with a test payment - no setup required.
+              Wallets show what happened. PayMemo records why after a transaction is detected.
+              Start with a Morph Hoodi test payment or watched-wallet demo.
             </p>
             <div className="mt-9 flex flex-wrap gap-3">
               <Link to="/app" className="group inline-flex items-center gap-2 rounded-full bg-ink text-cream px-6 py-3.5 text-sm font-semibold hover:bg-ink/85 transition-all">

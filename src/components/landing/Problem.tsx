@@ -14,7 +14,7 @@ export function Problem() {
         <div className="max-w-3xl">
           <span className="text-xs font-mono uppercase tracking-[0.2em] text-pink">01 - Problem</span>
           <h2 className="mt-3 text-4xl sm:text-5xl font-semibold tracking-[-0.02em]">
-            Wallets remember the transaction. <span className="font-serif-italic text-ink/50">Not the reason.</span>
+            Wallets show the transfer. <span className="font-serif-italic text-ink/50">Not the reason.</span>
           </h2>
         </div>
         <div className="mt-14 grid md:grid-cols-3 gap-5">

@@ -1,6 +1,5 @@
 import { motion } from "framer-motion";
 import { Activity, ArrowDownLeft, ArrowUpRight, Layers } from "lucide-react";
-import { transactions } from "@/lib/mock-data";
 
 const badge = (s: string) => {
   const map: Record<string, string> = {
@@ -13,6 +12,33 @@ const badge = (s: string) => {
 };
 
 export function DashboardPreview() {
+  const previewRows = [
+    {
+      id: "intent",
+      date: "After unlock",
+      counterparty: "Vendor wallet",
+      note: "Private memo decrypts locally",
+      amount: "User token",
+      status: "Confirmed",
+    },
+    {
+      id: "invoice",
+      date: "On payment",
+      counterparty: "Invoice payer",
+      note: "Linked tx hash after Morph receipt",
+      amount: "Invoice amount",
+      status: "Pending",
+    },
+    {
+      id: "agent",
+      date: "Agent task",
+      counterparty: "API or tool",
+      note: "Agent reason stays encrypted",
+      amount: "Policy spend",
+      status: "Needs Review",
+    },
+  ];
+
   return (
     <section id="dashboard" className="relative py-24 sm:py-32 px-6">
       <div className="mx-auto max-w-7xl">
@@ -51,10 +77,10 @@ export function DashboardPreview() {
             <div className="p-7 bg-white">
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                 {[
-                  { l: "Total Sent", v: "$84,200", icon: ArrowUpRight, c: "text-pink" },
-                  { l: "Total Received", v: "$142,500", icon: ArrowDownLeft, c: "text-mint" },
-                  { l: "Pending Intents", v: "12", icon: Activity, c: "text-papaya" },
-                  { l: "Confirmed", v: "412", icon: Layers, c: "text-ink" },
+                  { l: "Sent", v: "From vault", icon: ArrowUpRight, c: "text-pink" },
+                  { l: "Received", v: "From wallet", icon: ArrowDownLeft, c: "text-mint" },
+                  { l: "Pending", v: "Live intents", icon: Activity, c: "text-papaya" },
+                  { l: "Confirmed", v: "Verified txs", icon: Layers, c: "text-ink" },
                 ].map((k) => {
                   const I = k.icon;
                   return (
@@ -84,14 +110,14 @@ export function DashboardPreview() {
                     </tr>
                   </thead>
                   <tbody>
-                    {transactions.slice(0, 5).map((t) => (
+                    {previewRows.map((t) => (
                       <tr key={t.id} className="border-t border-ink/30">
                         <td className="px-4 py-3 text-ink/60">{t.date}</td>
                         <td className="px-4 py-3">
                           <div className="font-medium">{t.counterparty}</div>
                           <div className="text-xs text-ink/50">{t.note}</div>
                         </td>
-                        <td className="px-4 py-3 font-mono">{t.amount.toLocaleString()} {t.token}</td>
+                        <td className="px-4 py-3 font-mono">{t.amount}</td>
                         <td className="px-4 py-3">
                           <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest ${badge(t.status)}`}>
                             {t.status}

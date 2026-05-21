@@ -3,10 +3,10 @@ import { useRef } from "react";
 import { FileText, PenLine, Shield, Lock } from "lucide-react";
 
 const steps = [
-  { icon: FileText, label: "Intent Created", desc: "Capture purpose, note, counterparty.", color: "bg-pink" },
-  { icon: PenLine, label: "Wallet Signed", desc: "User confirms in their wallet.", color: "bg-papaya" },
-  { icon: Shield, label: "Onchain Verified", desc: "PayMemo verifies the receipt.", color: "bg-mint" },
-  { icon: Lock, label: "Vault Saved", desc: "Encrypted record finalized.", color: "bg-ink text-cream" },
+  { icon: PenLine, label: "Wallet Pays", desc: "User sends from PayMemo, a dApp, or wallet UI.", color: "bg-papaya" },
+  { icon: Shield, label: "Tx Detected", desc: "PayMemo watches the configured Morph wallet address.", color: "bg-mint" },
+  { icon: FileText, label: "Info Added", desc: "User records category, note, counterparty, and project.", color: "bg-pink" },
+  { icon: Lock, label: "Review Saved", desc: "Encrypted context lands in Review and the ledger.", color: "bg-ink text-cream" },
 ];
 
 export function Lifecycle() {
@@ -18,7 +18,7 @@ export function Lifecycle() {
         <div className="max-w-3xl">
           <span className="text-xs font-mono uppercase tracking-[0.2em] text-pink">02 - Lifecycle</span>
           <h2 className="mt-3 text-4xl sm:text-5xl font-semibold tracking-[-0.02em]">
-            Capture intent <span className="font-serif-italic text-gradient-aurora">before</span> the transaction disappears into history.
+            Add context <span className="font-serif-italic text-gradient-aurora">after</span> the transaction is detected.
           </h2>
         </div>
 

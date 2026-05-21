@@ -4,17 +4,17 @@ import { ArrowRight, Bot, Check, Lock, MousePointer2, ShieldCheck, Sparkles } fr
 import metamaskLogo from "@/assets/metamask.png";
 
 /**
- * Wallet-Assist intercept demo (Mode 02). Token-themed so it works in both modes.
+ * Wallet-Assist detection demo (Mode 02). Token-themed so it works in both modes.
  * A synthetic on-stage cursor moves between targets for every step so users can
  * follow exactly what's happening.
  */
 
 const STEPS = [
-  { id: 0, label: "Open dApp · pay invoice", duration: 3200 },
-  { id: 1, label: "Wallet asks to sign", duration: 3600 },
-  { id: 2, label: "PayMemo intercepts", duration: 5200 },
-  { id: 3, label: "Tag the payment", duration: 4200 },
-  { id: 4, label: "Signed & remembered", duration: 4400 },
+  { id: 0, label: "Send from wallet", duration: 3200 },
+  { id: 1, label: "Wallet signs", duration: 3600 },
+  { id: 2, label: "PayMemo detects tx", duration: 5200 },
+  { id: 3, label: "Add private info", duration: 4200 },
+  { id: 4, label: "Review & remember", duration: 4400 },
 ] as const;
 
 // Cursor positions per step, as % of the stage box.
@@ -24,11 +24,11 @@ const CURSOR_POS: { x: string; y: string; label: string }[] = [
   { x: "50%", y: "70%", label: "pay" },
   // Step 1: hovering "CONFIRM" inside the MetaMask popup (top-right, 300px wide)
   { x: "82%", y: "33%", label: "confirm" },
-  // Step 2: hovering the typewriter input inside PayMemo intercept modal
+  // Step 2: hovering the typewriter input inside PayMemo detected-transaction modal
   { x: "50%", y: "58%", label: "type" },
-  // Step 3: hovering the auto-tags row inside the intercept modal
+  // Step 3: hovering the auto-tags row inside the detected-transaction modal
   { x: "44%", y: "48%", label: "tag" },
-  // Step 4: hovering the "SIGN & REMEMBER" / receipt confirmation
+  // Step 4: hovering the "SAVE & REVIEW" / receipt confirmation
   { x: "50%", y: "52%", label: "submit" },
 ];
 
@@ -58,13 +58,13 @@ export function WalletAssist() {
           </span>
           <h2 className="font-display mt-5 text-[10vw] sm:text-[5.5rem] leading-[0.88]">
             THE QUIET <br />
-            <span className="font-serif-italic font-normal text-[var(--pink)]">intercept.</span>
+            <span className="font-serif-italic font-normal text-[var(--pink)]">listener.</span>
           </h2>
           <p className="font-body-alt mt-7 max-w-[44ch] text-base text-foreground/65 leading-relaxed">
-            Keep your wallet. Keep your dApps. PayMemo slides in for one second
-            before you sign · just long enough to ask{" "}
-            <em className="font-serif-italic text-foreground/85">what is this for</em>{" "}
-            · then steps aside and lets the chain do its thing.
+            Keep your wallet. Keep your dApps. PayMemo listens for watched Morph transactions,
+            then pops up after a payment is detected to ask{" "}
+            <em className="font-serif-italic text-foreground/85">what was this for</em>.
+            The answer moves into Review and your private ledger.
           </p>
 
           <div className="mt-6 inline-flex items-center gap-2 rounded-full border border-foreground/25 bg-foreground/5 px-3 py-1.5 text-[10px] font-display tracking-[0.28em] text-foreground/80">
@@ -144,7 +144,7 @@ function BrowserStage({ step }: { step: number }) {
         transition={{ delay: 0.6 }}
         className="absolute -top-5 -right-3 sm:right-6 inline-flex items-center gap-2 rounded-full bg-[var(--pink)] text-background px-4 py-1.5 text-[10px] font-display tracking-[0.25em]"
       >
-        <Sparkles className="h-3 w-3" /> LIVE INTERCEPT
+        <Sparkles className="h-3 w-3" /> LIVE DETECTION
       </motion.div>
     </div>
   );
@@ -266,7 +266,7 @@ function MetaMaskPopup() {
           2,400 USDC
         </motion.div>
         <div className="mt-1 font-mono text-[10px] text-foreground/45 truncate">
-          to 0x9f2a…c41 · gas ~$0.18
+          to 0x9f2a...c41 · wallet-estimated gas
         </div>
         <div className="mt-4 grid grid-cols-2 gap-2">
           <button className="h-9 rounded-lg border border-foreground/20 text-[11px] font-display tracking-widest text-foreground/70">
@@ -327,14 +327,14 @@ function PayMemoIntercept({ mode }: { mode: "ask" | "tag" }) {
             transition={{ duration: 1.6, repeat: Infinity }}
             className="h-2 w-2 rounded-full bg-[var(--pink)]"
           />
-          <span className="font-display text-[11px] tracking-[0.3em]">PAYMEMO · INTERCEPT</span>
+          <span className="font-display text-[11px] tracking-[0.3em]">PAYMEMO · DETECTED</span>
           <Lock className="ml-auto h-3.5 w-3.5 text-foreground/40" />
         </div>
 
         {mode === "ask" ? (
           <div className="p-6">
             <div className="font-body-alt text-xs uppercase tracking-[0.25em] text-foreground/55">
-              Before you sign
+              Transaction detected
             </div>
             <motion.div
               initial={{ opacity: 0, y: 6 }}
@@ -342,7 +342,7 @@ function PayMemoIntercept({ mode }: { mode: "ask" | "tag" }) {
               transition={{ delay: 0.2 }}
               className="mt-3 font-display text-3xl leading-tight"
             >
-              What is this <span className="font-serif-italic font-normal text-[var(--pink)]">payment</span> for
+              What was this <span className="font-serif-italic font-normal text-[var(--pink)]">payment</span> for
             </motion.div>
             <motion.div
               initial={{ opacity: 0 }}
@@ -354,7 +354,7 @@ function PayMemoIntercept({ mode }: { mode: "ask" | "tag" }) {
             </motion.div>
             <div className="mt-4 flex items-center gap-2 text-[11px] font-body-alt text-foreground/55">
               <ShieldCheck className="h-3.5 w-3.5 text-[var(--pink)]" />
-              Stays private · only you can read it
+              Saved after the tx · private to your vault
             </div>
           </div>
         ) : (
@@ -382,14 +382,14 @@ function PayMemoIntercept({ mode }: { mode: "ask" | "tag" }) {
               className="mt-5 flex items-center gap-2 text-xs font-body-alt text-foreground/65"
             >
               <ShieldCheck className="h-4 w-4 text-[var(--pink)]" />
-              Encrypted to your ledger only
+               Sent to Review, encrypted to your ledger
             </motion.div>
             <motion.div
               animate={{ scale: [1, 1.02, 1] }}
               transition={{ duration: 1.6, repeat: Infinity, delay: 1.2 }}
               className="mt-5 h-11 rounded-xl bg-foreground text-background grid place-items-center font-display tracking-[0.25em] text-[12px]"
             >
-              SIGN &amp; REMEMBER →
+              SAVE &amp; REVIEW →
             </motion.div>
           </div>
         )}
@@ -424,8 +424,8 @@ function Receipt() {
             <Check className="h-5 w-5" strokeWidth={3} />
           </motion.span>
           <div>
-            <div className="font-display text-[11px] tracking-[0.3em] text-[var(--pink)]">SIGNED</div>
-            <div className="font-body-alt text-xs text-foreground/55">tx 0x4ad…9b1 · verified</div>
+            <div className="font-display text-[11px] tracking-[0.3em] text-[var(--pink)]">REVIEWED</div>
+            <div className="font-body-alt text-xs text-foreground/55">tx 0x4ad…9b1 · detected</div>
           </div>
         </div>
         <div className="mt-6 grid grid-cols-2 gap-3 font-body-alt text-xs">
@@ -448,7 +448,7 @@ function Receipt() {
           transition={{ delay: 1 }}
           className="mt-5 flex items-center gap-2 text-[11px] font-display tracking-[0.25em] text-foreground/60"
         >
-          <ArrowRight className="h-3.5 w-3.5" /> Ready for payroll invoices &amp; agent accounting
+        <ArrowRight className="h-3.5 w-3.5" /> Ready for payroll, invoices &amp; agent accounting
         </motion.div>
       </div>
     </motion.div>

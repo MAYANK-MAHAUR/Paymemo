@@ -9,11 +9,18 @@
     <main>
       <header class="hero">
         <div class="brand-row">
-          <span class="logo">P</span>
-          <div>
-            <p class="eyebrow">PayMemo</p>
-            <h1>Wallet Assist</h1>
+          <div class="brand-lockup">
+            <span class="logo">P</span>
+            <div>
+              <p class="eyebrow">PayMemo</p>
+              <h1>Wallet Assist</h1>
+            </div>
           </div>
+          <button id="openSettingsPage" class="menu-button" type="button" aria-label="Open settings">
+            <span></span>
+            <span></span>
+            <span></span>
+          </button>
         </div>
         <p class="hero-copy">Capture the why before supported EVM wallet signatures continue.</p>
       </header>
@@ -58,6 +65,17 @@
         </article>
       </section>
 
+      <section class="watch-health">
+        <div>
+          <span class="label">Last Morph block</span>
+          <strong id="lastBlock">-</strong>
+        </div>
+        <div>
+          <span class="label">Last scan</span>
+          <strong id="lastScan">Not yet</strong>
+        </div>
+      </section>
+
       <section class="settings">
         <label>
           PayMemo app URL
@@ -82,12 +100,13 @@
           </label>
         </div>
         <label>
-          Watched Morph wallet address
+          Watched Morph wallets
           <textarea
             id="watchedAddresses"
-            placeholder="0x...&#10;Add one address per line for this demo"
+            placeholder="Main wallet | 0x...&#10;Payroll wallet | 0x...&#10;One named wallet per line"
           ></textarea>
         </label>
+        <button id="useLastWallet" class="secondary" type="button">Use last detected wallet</button>
         <label class="checkline">
           <input id="autoOpenChainWatchPrompt" type="checkbox" />
           Auto-open memo prompt after Morph tx detection
@@ -101,7 +120,17 @@
 
       <div class="toolbar">
         <button id="openApp" class="primary">Open dApp</button>
+        <button id="openSidePanel" class="secondary">Side panel</button>
+      </div>
+
+      <div class="toolbar compact">
         <button id="syncAll" class="secondary">Sync all</button>
+        <button id="clearSynced" class="secondary">Clear synced</button>
+      </div>
+
+      <div class="toolbar compact">
+        <button id="copyDemo" class="secondary">Demo steps</button>
+        <button id="openReviewBottom" class="secondary" type="button">Open review</button>
       </div>
 
       <section id="records" class="records"></section>

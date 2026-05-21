@@ -11,9 +11,12 @@ const scanStatus = document.querySelector("#scanStatus");
 const totalEl = document.querySelector("#total");
 const pendingEl = document.querySelector("#pending");
 const confirmedEl = document.querySelector("#confirmed");
+const lastBlockEl = document.querySelector("#lastBlock");
+const lastScanEl = document.querySelector("#lastScan");
 
 let currentSettings = {};
 let currentRecords = [];
+let currentWatchState = {};
 let liveScanTimer = null;
 
 function escapeHtml(value) {
@@ -29,6 +32,40 @@ function sendMessage(message) {
   return new Promise((resolve) => {
     chrome.runtime.sendMessage(message, (response) => resolve(response || {}));
   });
+}
+
+function parseWatchedWalletLines(value) {
+  const labels = {};
+  const addresses = [];
+  String(value || "")
+    .split(/\n+/)
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .forEach((line) => {
+      const match = line.match(/0x[a-fA-F0-9]{40}/);
+      if (!match) return;
+      const address = match[0].toLowerCase();
+      const label = line
+        .replace(match[0], "")
+        .replace(/[|,\-–—:]+/g, " ")
+        .replace(/\s+/g, " ")
+        .trim();
+      if (!addresses.includes(address)) addresses.push(address);
+      if (label) labels[address] = label;
+    });
+  return { addresses, labels };
+}
+
+function formatWatchedWallets(settings = {}) {
+  const labels = settings.watchedWalletLabels || {};
+  const addresses = Array.isArray(settings.watchedAddresses)
+    ? settings.watchedAddresses
+    : String(settings.watchedAddresses || "").split(/[\s,]+/);
+  return addresses
+    .map((address) => String(address || "").trim().toLowerCase())
+    .filter((address) => /^0x[a-f0-9]{40}$/.test(address))
+    .map((address) => (labels[address] ? `${labels[address]} | ${address}` : address))
+    .join("\n");
 }
 
 function statusText(status) {
@@ -54,6 +91,14 @@ function renderStats(records) {
   confirmedEl.textContent = String(
     records.filter((record) => record.status === "confirmed").length,
   );
+}
+
+function renderWatchHealth(watchState = {}) {
+  currentWatchState = watchState;
+  lastBlockEl.textContent = watchState.lastBlock ? String(watchState.lastBlock) : "-";
+  lastScanEl.textContent = watchState.updatedAt
+    ? new Date(watchState.updatedAt).toLocaleTimeString()
+    : "Not yet";
 }
 
 function render(records) {
@@ -97,8 +142,8 @@ function render(records) {
   recordsRoot.querySelectorAll("[data-sync]").forEach((button) => {
     button.addEventListener("click", async () => {
       button.textContent = "Syncing";
-      const response = await sendMessage({ type: "PAYMEMO_SYNC_RECORD", id: button.dataset.sync });
-      button.textContent = response.ok ? "Synced" : "Failed";
+      const response = await sendMessage({ type: "PAYMEMO_SYNC_RECORD", id: button.dataset.sync, removeLocal: true });
+      button.textContent = response.ok ? "Moved" : "Failed";
       await load();
     });
   });
@@ -131,9 +176,7 @@ function applySettings(settings) {
   rpcUrlInput.value = settings.rpcUrl || "";
   chainWatchInput.checked = Boolean(settings.chainWatchEnabled);
   chainWatchText.textContent = settings.chainWatchEnabled ? "Watching Morph" : "Paused";
-  watchedAddressesInput.value = Array.isArray(settings.watchedAddresses)
-    ? settings.watchedAddresses.join("\n")
-    : settings.watchedAddresses || "";
+  watchedAddressesInput.value = formatWatchedWallets(settings);
   autoOpenChainWatchPromptInput.checked = settings.autoOpenChainWatchPrompt !== false;
   configureLivePopupScan();
 }
@@ -141,6 +184,7 @@ function applySettings(settings) {
 async function load() {
   const response = await sendMessage({ type: "PAYMEMO_GET_STATE" });
   applySettings(response.settings || {});
+  renderWatchHealth(response.watchState || {});
   render(response.records || []);
 }
 
@@ -167,15 +211,20 @@ enabledInput.addEventListener("change", async () => {
     settings: { ...currentSettings, enabled: enabledInput.checked },
   });
   applySettings(settings.settings || {});
+  scanStatus.textContent = chainWatchInput.checked
+    ? "Morph watcher is on. New txs without a memo will land in Review."
+    : "Morph watcher paused.";
 });
 
 chainWatchInput.addEventListener("change", async () => {
+  const watched = parseWatchedWalletLines(watchedAddressesInput.value);
   const settings = await sendMessage({
     type: "PAYMEMO_SAVE_SETTINGS",
     settings: {
       ...currentSettings,
       chainWatchEnabled: chainWatchInput.checked,
-      watchedAddresses: watchedAddressesInput.value,
+      watchedAddresses: watched.addresses,
+      watchedWalletLabels: watched.labels,
       autoOpenChainWatchPrompt: autoOpenChainWatchPromptInput.checked,
     },
   });
@@ -183,6 +232,7 @@ chainWatchInput.addEventListener("change", async () => {
 });
 
 document.querySelector("#saveSettings").addEventListener("click", async () => {
+  const watched = parseWatchedWalletLines(watchedAddressesInput.value);
   const response = await sendMessage({
     type: "PAYMEMO_SAVE_SETTINGS",
     settings: {
@@ -190,11 +240,15 @@ document.querySelector("#saveSettings").addEventListener("click", async () => {
       appUrl: appUrlInput.value.trim(),
       rpcUrl: rpcUrlInput.value.trim(),
       chainWatchEnabled: chainWatchInput.checked,
-      watchedAddresses: watchedAddressesInput.value,
+      watchedAddresses: watched.addresses,
+      watchedWalletLabels: watched.labels,
       autoOpenChainWatchPrompt: autoOpenChainWatchPromptInput.checked,
     },
   });
   applySettings(response.settings || {});
+  scanStatus.textContent = response.ok
+    ? "Settings saved. Morph watcher uses these wallet names."
+    : "Settings could not be saved.";
 });
 
 document.querySelector("#openApp").addEventListener("click", () => {
@@ -202,9 +256,74 @@ document.querySelector("#openApp").addEventListener("click", () => {
   chrome.tabs.create({ url });
 });
 
+document.querySelector("#openSettingsPage")?.addEventListener("click", () => {
+  if (chrome.runtime.openOptionsPage) {
+    chrome.runtime.openOptionsPage();
+    return;
+  }
+  chrome.tabs.create({ url: chrome.runtime.getURL("settings.html") });
+});
+
+document.querySelector("#openSidePanel").addEventListener("click", async () => {
+  const response = await sendMessage({ type: "PAYMEMO_OPEN_SIDE_PANEL" });
+  if (!response.ok)
+    scanStatus.textContent = response.error || "Open side panel from Chrome toolbar.";
+});
+
+document.querySelector("#useLastWallet").addEventListener("click", async () => {
+  const detected = currentRecords
+    .map((record) => record.from)
+    .find((address) => /^0x[a-fA-F0-9]{40}$/.test(String(address || "")));
+  if (!detected) {
+    scanStatus.textContent = "No detected wallet address yet. Start one dApp transaction or paste it once.";
+    return;
+  }
+  const parsed = parseWatchedWalletLines(watchedAddressesInput.value);
+  const detectedKey = detected.toLowerCase();
+  const next = Array.from(new Set([detectedKey, ...parsed.addresses]));
+  const labels = {
+    ...parsed.labels,
+    [detectedKey]: parsed.labels[detectedKey] || "Last detected wallet",
+  };
+  watchedAddressesInput.value = next
+    .map((address) => (labels[address] ? `${labels[address]} | ${address}` : address))
+    .join("\n");
+  const response = await sendMessage({
+    type: "PAYMEMO_SAVE_SETTINGS",
+    settings: {
+      ...currentSettings,
+      watchedAddresses: next,
+      watchedWalletLabels: labels,
+      chainWatchEnabled: true,
+      autoOpenChainWatchPrompt: autoOpenChainWatchPromptInput.checked,
+    },
+  });
+  applySettings(response.settings || {});
+  scanStatus.textContent = "Wallet saved locally. Morph chain watch is on.";
+});
+
 document.querySelector("#openReview").addEventListener("click", () => {
   const url = `${(currentSettings.appUrl || "http://127.0.0.1:5174").replace(/\/$/, "")}/app/review`;
   chrome.tabs.create({ url });
+});
+
+document.querySelector("#openReviewBottom")?.addEventListener("click", () => {
+  const url = `${(currentSettings.appUrl || "http://127.0.0.1:5174").replace(/\/$/, "")}/app/review`;
+  chrome.tabs.create({ url });
+});
+
+document.querySelector("#copyDemo").addEventListener("click", async () => {
+  const steps = [
+    "1. Add Morph Hoodi to Bitget Wallet.",
+    "2. Paste your Morph wallet address into PayMemo extension.",
+    "3. Enable Morph Chain Watch.",
+    "4. Click Side panel and keep it open.",
+    "5. Send a Morph Hoodi tx from Bitget Wallet.",
+    "6. Add the private memo when PayMemo detects the tx.",
+    "7. Click Save & sync, then show it in the dApp.",
+  ].join("\n");
+  await navigator.clipboard.writeText(steps);
+  scanStatus.textContent = "Demo steps copied.";
 });
 
 document.querySelector("#scanMorphNow").addEventListener("click", async () => {
@@ -221,7 +340,19 @@ document.querySelector("#scanMorphNow").addEventListener("click", async () => {
 });
 
 document.querySelector("#syncAll").addEventListener("click", async () => {
-  await sendMessage({ type: "PAYMEMO_SYNC_ALL" });
+  scanStatus.textContent = "Syncing records to PayMemo...";
+  const response = await sendMessage({ type: "PAYMEMO_SYNC_ALL", removeLocal: true });
+  scanStatus.textContent = response.ok
+    ? `Synced and removed ${response.count ?? 0} local record${response.count === 1 ? "" : "s"}.`
+    : response.error || "Sync failed.";
+  await load();
+});
+
+document.querySelector("#clearSynced")?.addEventListener("click", async () => {
+  const response = await sendMessage({ type: "PAYMEMO_CLEAR_SYNCED_RECORDS" });
+  scanStatus.textContent = response.ok
+    ? `Cleared ${response.count ?? 0} synced local record${response.count === 1 ? "" : "s"}.`
+    : response.error || "Could not clear synced records.";
   await load();
 });
 

@@ -28,6 +28,38 @@ export async function createAgentPaymentIntent(
   return response.json();
 }
 
+export async function createEncryptedAgentPaymentIntent(
+  encryptedRecord: unknown,
+  baseUrl = "http://127.0.0.1:5174",
+) {
+  const response = await fetch(`${baseUrl}/api/agent-payment-intent`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(encryptedRecord),
+  });
+
+  if (!response.ok) {
+    throw new Error(`PayMemo encrypted agent payment intent API failed: ${response.status}`);
+  }
+
+  return response.json();
+}
+
+export async function listEncryptedAgentPaymentIntents(
+  walletAddress: string,
+  baseUrl = "http://127.0.0.1:5174",
+) {
+  const url = new URL("/api/agent-payment-intent", baseUrl);
+  url.searchParams.set("wallet", walletAddress);
+
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error(`PayMemo encrypted agent intent lookup failed: ${response.status}`);
+  }
+
+  return response.json();
+}
+
 export async function listAgentPaymentMemory(
   filters: { agentId?: string; taskId?: string } = {},
   baseUrl = "http://127.0.0.1:5174",

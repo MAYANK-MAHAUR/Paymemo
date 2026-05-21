@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { agentMemoryRequestSchema, normalizeRecord } from "@/lib/paymemo-schema";
-
-const agentMemoryStore: ReturnType<typeof normalizeRecord>[] = [];
+import { addAgentMemoryRecord, listAgentMemoryRecords } from "@/lib/server/paymemo-db";
+import { checkRateLimit } from "@/lib/server/rate-limit";
 
 export const Route = createFileRoute("/api/agent-memory")({
   server: {
@@ -10,17 +10,14 @@ export const Route = createFileRoute("/api/agent-memory")({
         const url = new URL(request.url);
         const agentId = url.searchParams.get("agentId");
         const taskId = url.searchParams.get("taskId");
-        const records = agentMemoryStore.filter((record) => {
-          if (agentId && record.agentId !== agentId) return false;
-          if (taskId && record.taskId !== taskId) return false;
-          return true;
-        });
+        const records = await listAgentMemoryRecords({ agentId, taskId });
 
         return Response.json({
           name: "PayMemo Agent Memory API",
           description: "Agents call this before or after spending to explain why money moved.",
           records,
           count: records.length,
+          storage: "database",
           endpoints: {
             createIntent: "POST /api/agent-memory",
             listAll: "GET /api/agent-memory",
@@ -35,13 +32,16 @@ export const Route = createFileRoute("/api/agent-memory")({
             reason: "Needed live order book data to complete the BTC research task.",
             to: "0xAPIWallet",
             amount: "0.20",
-            token: "USDC",
+            token: "ETH",
             policy: "under-limit",
           },
         });
       },
 
       POST: async ({ request }: { request: Request }) => {
+        const limited = checkRateLimit(request, { scope: "agent-memory-post", limit: 30 });
+        if (!limited.ok) return limited.response;
+
         const body = await request.json().catch(() => null);
         const parsed = agentMemoryRequestSchema.safeParse(body);
 
@@ -73,12 +73,12 @@ export const Route = createFileRoute("/api/agent-memory")({
           source: "agent-api",
         });
 
-        agentMemoryStore.unshift(record);
-        agentMemoryStore.splice(100);
+        await addAgentMemoryRecord(record);
 
         return Response.json({
           ok: true,
           record,
+          storage: "database",
           policy: payload.policy,
           approvalRequired: needsReview,
           humanReadable: `Agent ${payload.agentId} paid ${payload.amount} ${payload.token} for ${payload.paidFor}: ${payload.reason}`,

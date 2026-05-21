@@ -15,10 +15,56 @@ dist-ssr
 .tanstack/**
 .nitro
 *.local
+database/paymemo-dev-db.json
+
+# Environment / secrets
+.env
+.env.*
+.env.*.local
+!.env.example
+!.env.*.example
+!.env.local.example
+secrets/
+*.secret
+*.secrets
+
+# Private keys / certificates / wallet material
+*.pem
+*.key
+*.p12
+*.pfx
+*.cer
+*.crt
+*.der
+*.asc
+*.gpg
+id_rsa
+id_rsa.*
+id_ed25519
+id_ed25519.*
+*.keystore
+*.jks
+mnemonic*.txt
+seed*.txt
+wallet*.json
+keystore/
 
 # Wrangler / Cloudflare
 .wrangler/
 .dev.vars
+.dev.vars.*
+
+# Hosting / deploy
+.vercel/
+.netlify/
+.firebase/
+
+# Build / cache
+.cache/
+coverage/
+*.tsbuildinfo
+.tmp/
+tmp/
 
 # Editor directories and files
 .vscode/*

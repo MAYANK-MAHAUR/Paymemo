@@ -17,10 +17,10 @@ import { Noise } from "@/components/fx/Noise";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "PayMemo - Add meaning before you sign" },
-      { name: "description", content: "PayMemo turns raw wallet transactions into private, verified payment records for payroll, invoices, swaps, bridges, and business accounting." },
-      { property: "og:title", content: "PayMemo - Add meaning before you sign" },
-      { property: "og:description", content: "Private transaction memory and onchain accounting for stablecoin payments." },
+      { title: "PayMemo - Add meaning after wallet transactions" },
+      { name: "description", content: "PayMemo watches Morph wallet activity, asks for private context after payment, and turns raw transactions into reviewable accounting records." },
+      { property: "og:title", content: "PayMemo - Add meaning after wallet transactions" },
+      { property: "og:description", content: "Post-payment transaction memory and private onchain accounting for wallet activity." },
     ],
   }),
   component: Index,

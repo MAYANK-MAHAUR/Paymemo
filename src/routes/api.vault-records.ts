@@ -1,5 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { z } from "zod";
+import { deleteVaultRecords, listVaultRecords, upsertVaultRecord } from "@/lib/server/paymemo-db";
+import { paymentModeSchema, recordStatusSchema } from "@/lib/paymemo-schema";
+import { requireWalletAuth } from "@/lib/server/wallet-auth";
 
 const encryptedMetadataSchema = z.object({
   version: z.literal(1),
@@ -13,8 +16,8 @@ const encryptedMetadataSchema = z.object({
 
 const publicRecordSchema = z.object({
   id: z.string().min(1),
-  mode: z.enum(["direct", "wallet-assist", "agent"]),
-  status: z.string().min(1),
+  mode: paymentModeSchema,
+  status: recordStatusSchema,
   chainId: z.number(),
   chainName: z.string().min(1),
   txHash: z.string().optional(),
@@ -35,10 +38,6 @@ const storedRecordSchema = z.object({
   updatedAt: z.string().min(1),
 });
 
-type StoredRecord = z.infer<typeof storedRecordSchema>;
-
-const vaultStore = new Map<string, StoredRecord[]>();
-
 export const Route = createFileRoute("/api/vault-records")({
   server: {
     handlers: {
@@ -58,10 +57,12 @@ export const Route = createFileRoute("/api/vault-records")({
           );
         }
 
-        return Response.json({
-          ok: true,
-          records: vaultStore.get(walletAddress) ?? [],
-        });
+        const auth = await requireWalletAuth(request, walletAddress);
+        if (!auth.ok) return auth.response;
+
+        const records = await listVaultRecords(walletAddress);
+
+        return Response.json({ ok: true, records, storage: "database" });
       },
 
       POST: async ({ request }: { request: Request }) => {
@@ -75,12 +76,32 @@ export const Route = createFileRoute("/api/vault-records")({
           );
         }
 
-        const record = { ...parsed.data, syncStatus: "synced" as const };
-        const walletKey = record.walletAddress.toLowerCase();
-        const current = vaultStore.get(walletKey) ?? [];
-        vaultStore.set(walletKey, [record, ...current.filter((item) => item.id !== record.id)]);
+        const auth = await requireWalletAuth(request, parsed.data.walletAddress);
+        if (!auth.ok) return auth.response;
 
-        return Response.json({ ok: true, record });
+        try {
+          const record = await upsertVaultRecord(parsed.data);
+          return Response.json({ ok: true, record, storage: "database" });
+        } catch (error) {
+          const message = error instanceof Error ? error.message : "Unable to save vault record";
+          const status = message.toLowerCase().includes("owned by a different wallet") ? 403 : 500;
+          return Response.json({ error: message }, { status });
+        }
+      },
+
+      DELETE: async ({ request }: { request: Request }) => {
+        const url = new URL(request.url);
+        const walletAddress = url.searchParams.get("wallet")?.toLowerCase();
+
+        if (!walletAddress) {
+          return Response.json({ error: "Missing wallet query parameter" }, { status: 400 });
+        }
+
+        const auth = await requireWalletAuth(request, walletAddress);
+        if (!auth.ok) return auth.response;
+
+        const remaining = await deleteVaultRecords(walletAddress);
+        return Response.json({ ok: true, deleted: true, remaining });
       },
     },
   },

@@ -10,7 +10,7 @@ What is this transaction for?
 
 Then it stores the context locally, tracks the tx hash when the wallet returns one, polls Morph Hoodi for receipt confirmation, and lets the user sync the captured record back into the PayMemo dApp session.
 
-It also includes a Morph-only Chain Watch fallback for wallet-internal sends. If a user sends from Bitget Wallet's own extension screen, PayMemo cannot inject into that private wallet UI, but it can watch the configured Morph Hoodi wallet address and open a memo prompt shortly after the transaction is detected onchain.
+It also includes a Morph-only Chain Watch fallback for wallet-internal sends. If a user sends from Bitget Wallet's own extension screen, PayMemo cannot inject into that private wallet UI, but it can watch the configured Morph Hoodi wallet address and show a same-page memo drawer or side panel update shortly after the transaction is detected onchain.
 
 ## Load Unpacked
 
@@ -36,13 +36,13 @@ It also includes a Morph-only Chain Watch fallback for wallet-internal sends. If
 ## Morph Chain Watch Demo
 
 1. Open the PayMemo extension popup.
-2. Paste the Morph Hoodi wallet address you will send from.
+2. Add the wallet you will send from, with an optional name such as `Main wallet | 0xYourAddress`.
 3. Enable Morph chain watch.
 4. Send a Morph Hoodi testnet transaction from Bitget Wallet's own Send screen.
-5. Keep the PayMemo extension popup open during demos for the fastest live scan loop.
-6. PayMemo scans Morph Hoodi, detects the new transaction, and opens a compact dark memo prompt for the detected tx.
-7. If several transactions are detected together, PayMemo opens one batch memo prompt instead of several windows.
-8. Add the private reason, then sync it into the PayMemo dApp.
+5. Open the side panel, paste the wallet address, and click Start listening.
+6. PayMemo scans Morph Hoodi, detects incoming or outgoing transactions for that wallet, auto-syncs them as `needs-review`, and opens a compact dark memo drawer on the active web page when Chrome allows it.
+7. If Chrome cannot inject into the active page, PayMemo opens its own small prompt window focused on the new transaction and also updates the badge/side panel.
+8. Add the private reason, then sync it into the PayMemo dApp Review tab.
 
 ## Scope
 

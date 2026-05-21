@@ -1,7 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { Topbar } from "@/components/app/Topbar";
+import { WalletConnectModal } from "@/components/app/WalletConnectModal";
 import {
-  connectWallet,
+  getErc20Balance,
+  getMorphTokenContract,
+  getNativeBalance,
+  morphTokens,
   isAddress,
   morphHoodi,
   sendErc20Payment,
@@ -12,7 +16,9 @@ import {
 import {
   deriveVaultKey,
   encryptPrivateMetadata,
+  getRememberedVaultKey,
   rememberVaultSession,
+  readVaultSession,
   signVaultUnlock,
 } from "@/lib/crypto-vault";
 import {
@@ -29,18 +35,17 @@ import {
   Plus,
   Trash2,
   Search,
-  Zap,
   Shield,
   ChevronDown,
   ArrowDown,
-  Fuel,
   Network,
   Check,
   X,
   Info,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { notify } from "@/lib/notify";
 
 export const Route = createFileRoute("/app/send")({
   head: () => ({ meta: [{ title: "Send Payment · PayMemo" }] }),
@@ -48,77 +53,22 @@ export const Route = createFileRoute("/app/send")({
 });
 
 type Asset = {
-  symbol: string;
+  symbol: "ETH" | "USDC" | "WETH" | "BGB";
   name: string;
-  balance: number;
-  usd: number;
   type: "stable" | "native" | "token" | "nft";
   chain: string;
-  decimals?: number;
+  decimals: number;
+  contractAddress: string;
   envContractKey?: string;
+  hoodiStatus: "native" | "official" | "env-required";
+  note: string;
 };
 
-const ASSETS: Asset[] = [
-  {
-    symbol: "USDC",
-    name: "USD Coin",
-    balance: 48230.55,
-    usd: 1.0,
-    type: "stable",
-    chain: "Morph",
-    decimals: 6,
-    envContractKey: "VITE_MORPH_USDC_ADDRESS",
-  },
-  {
-    symbol: "USDT",
-    name: "Tether",
-    balance: 12500.0,
-    usd: 1.0,
-    type: "stable",
-    chain: "Morph",
-    decimals: 6,
-    envContractKey: "VITE_MORPH_USDT_ADDRESS",
-  },
-  {
-    symbol: "PYUSD",
-    name: "PayPal USD",
-    balance: 3200.18,
-    usd: 1.0,
-    type: "stable",
-    chain: "Morph",
-    decimals: 6,
-    envContractKey: "VITE_MORPH_PYUSD_ADDRESS",
-  },
-  {
-    symbol: "DAI",
-    name: "Dai Stablecoin",
-    balance: 9810.42,
-    usd: 1.0,
-    type: "stable",
-    chain: "Morph",
-    decimals: 18,
-    envContractKey: "VITE_MORPH_DAI_ADDRESS",
-  },
-  { symbol: "ETH", name: "Ether", balance: 4.2031, usd: 3420.5, type: "native", chain: "Morph" },
-  {
-    symbol: "WBTC",
-    name: "Wrapped Bitcoin",
-    balance: 0.1842,
-    usd: 96200.0,
-    type: "token",
-    chain: "Morph",
-  },
-  {
-    symbol: "MORPH",
-    name: "Morph Token",
-    balance: 12500,
-    usd: 0.42,
-    type: "native",
-    chain: "Morph",
-  },
-  { symbol: "ARB", name: "Arbitrum", balance: 820.5, usd: 0.78, type: "token", chain: "Morph" },
-  { symbol: "LINK", name: "Chainlink", balance: 142.3, usd: 18.4, type: "token", chain: "Morph" },
-];
+const ASSETS: Asset[] = morphTokens.map((token) => ({
+  ...token,
+  chain: "Morph Hoodi",
+  contractAddress: getMorphTokenContract(token.symbol),
+}));
 
 const CATS = [
   "Payroll",
@@ -135,11 +85,6 @@ const CATS = [
   "API Payment",
   "Agent Task Payment",
 ];
-const SPEEDS = [
-  { id: "standard", label: "Standard", time: "~12s", gwei: 0.08 },
-  { id: "fast", label: "Fast", time: "~6s", gwei: 0.14 },
-  { id: "instant", label: "Instant", time: "~2s", gwei: 0.22 },
-];
 
 type Recipient = { id: string; address: string; name: string; amount: string; note: string };
 
@@ -155,14 +100,10 @@ function newRecipient(): Recipient {
 
 type FlowStep = "idle" | "intent" | "signature" | "chain" | "confirmed" | "failed";
 
-function getTokenContract(asset: Asset) {
-  if (!asset.envContractKey) return "";
-  return (import.meta.env[asset.envContractKey] as string | undefined) ?? "";
-}
-
 function Send() {
   const [mode, setMode] = useState<"single" | "batch">("single");
   const [walletAddress, setWalletAddress] = useState("");
+  const [walletPickerOpen, setWalletPickerOpen] = useState(false);
   const [walletMessage, setWalletMessage] = useState(
     "Connect a wallet to prepare Morph Hoodi signing.",
   );
@@ -170,46 +111,32 @@ function Send() {
   const [asset, setAsset] = useState<Asset>(
     ASSETS.find((item) => item.symbol === "ETH") ?? ASSETS[0],
   );
+  const [balances, setBalances] = useState<Record<string, string>>({});
   const [search, setSearch] = useState("");
   const [flowStep, setFlowStep] = useState<FlowStep>("idle");
   const [flowMessage, setFlowMessage] = useState(
-    "Intent not saved yet. Private context stays local until you unlock the vault.",
+    "Intent not saved yet. Please connect wallet before continuing.",
   );
   const [txHash, setTxHash] = useState("");
   const [sending, setSending] = useState(false);
 
   const [cat, setCat] = useState("Vendor Payment");
-  const [tag, setTag] = useState("Project: Mercury-Revamp");
-  const [speed, setSpeed] = useState("fast");
+  const [tag, setTag] = useState("");
 
   const [single, setSingle] = useState<Recipient>({
     id: "s1",
     address: "",
-    name: "Aether Studio",
-    amount: "0.001",
-    note: "Logo design milestone 2",
+    name: "",
+    amount: "0.0001",
+    note: "",
   });
   const [batch, setBatch] = useState<Recipient[]>([
     {
       id: "b1",
-      address: "0x44a1...f72d",
-      name: "Lina K.",
-      amount: "5400",
-      note: "October payroll",
-    },
-    {
-      id: "b2",
-      address: "0x88c0...91ae",
-      name: "Marco P.",
-      amount: "5400",
-      note: "October payroll",
-    },
-    {
-      id: "b3",
-      address: "0xe2bd...0017",
-      name: "Priya S.",
-      amount: "5400",
-      note: "October payroll",
+      address: "",
+      name: "",
+      amount: "0.0001",
+      note: "",
     },
   ]);
 
@@ -223,10 +150,9 @@ function Send() {
     mode === "single"
       ? Number(single.amount || 0)
       : batch.reduce((s, r) => s + Number(r.amount || 0), 0);
-  const totalUsd = totalAmount * asset.usd;
-  const gas = SPEEDS.find((s) => s.id === speed)!.gwei;
-  const gasUsd = gas * (mode === "batch" ? batch.length : 1) * 0.42;
   const connected = Boolean(walletAddress);
+  const assetBalance = balances[asset.symbol] ?? "";
+  const canTransferAsset = asset.symbol === "ETH" || isAddress(asset.contractAddress);
   const lifecycleOn = {
     Intent: flowStep !== "idle",
     Sign: ["signature", "chain", "confirmed"].includes(flowStep),
@@ -235,13 +161,38 @@ function Send() {
   };
 
   const prepareWallet = async () => {
-    try {
-      const account = await connectWallet();
-      setWalletAddress(account);
-      setWalletMessage("Wallet connected and switched to Morph Hoodi.");
-    } catch {
-      setWalletMessage("No browser wallet found. Install MetaMask, Rabby, OKX, or Bitget to sign.");
-    }
+    setWalletMessage("Please connect wallet before continuing.");
+    setWalletPickerOpen(true);
+  };
+
+  async function onWalletConnected(account: string) {
+    setWalletAddress(account);
+    setWalletMessage("Wallet connected and switched to Morph Hoodi.");
+    await loadTokenBalances(account);
+  }
+
+  const loadTokenBalances = async (account: string) => {
+    const next: Record<string, string> = {};
+    await Promise.all(
+      ASSETS.map(async (item) => {
+        try {
+          if (item.symbol === "ETH") {
+            next[item.symbol] = await getNativeBalance(account);
+            return;
+          }
+          if (isAddress(item.contractAddress)) {
+            next[item.symbol] = await getErc20Balance({
+              owner: account,
+              tokenContract: item.contractAddress,
+              decimals: item.decimals,
+            });
+          }
+        } catch {
+          next[item.symbol] = "";
+        }
+      }),
+    );
+    setBalances(next);
   };
 
   const saveEncryptedRecord = async (
@@ -306,7 +257,15 @@ function Send() {
       setTxHash("");
       setFlowStep("intent");
 
-      const account = walletAddress || (await connectWallet());
+      if (!walletAddress) {
+        setWalletMessage("Please connect wallet before continuing.");
+        setFlowMessage("Please connect wallet before continuing.");
+        setWalletPickerOpen(true);
+        notify.walletRequired();
+        return;
+      }
+
+      const account = walletAddress;
       setWalletAddress(account);
       setWalletMessage("Wallet connected. Unlock the PayMemo vault to encrypt this intent.");
 
@@ -314,21 +273,35 @@ function Send() {
       if (!recipient.address || !isAddress(recipient.address)) {
         throw new Error("Enter a full recipient address before signing.");
       }
+      if (!recipient.amount || Number(recipient.amount) <= 0) {
+        throw new Error("Enter a positive amount before signing.");
+      }
 
       const intentId = createRecordId("intent");
-      const signature = await signVaultUnlock(account);
-      rememberVaultSession(account, signature);
-      const vaultKey = await deriveVaultKey(signature, account);
+      const session = readVaultSession();
+      const vaultKey =
+        session?.walletAddress.toLowerCase() === account.toLowerCase()
+          ? await getRememberedVaultKey()
+          : null;
+      const key = vaultKey ?? (await (async () => {
+        const signature = await signVaultUnlock(account);
+        rememberVaultSession(account, signature);
+        return deriveVaultKey(signature, account);
+      })());
 
-      await saveEncryptedRecord(intentId, "pending_signature", vaultKey, account);
+      await saveEncryptedRecord(intentId, "pending_signature", key, account);
       setFlowStep("signature");
       setFlowMessage("Encrypted pending intent saved. Waiting for wallet signature.");
 
       let hash = "";
+      if (!canTransferAsset) {
+        throw new Error(`${asset.symbol} is visible for PayMemo records, but no Morph Hoodi contract is configured for live transfers.`);
+      }
+
       if (asset.symbol === "ETH") {
         hash = await sendNativePayment(account, recipient.address, recipient.amount);
       } else {
-        const tokenContract = getTokenContract(asset);
+        const tokenContract = asset.contractAddress;
         if (!tokenContract) {
           throw new Error(
             `${asset.symbol} contract address is not configured. Use ETH for the live Morph Hoodi demo or set ${asset.envContractKey}.`,
@@ -344,24 +317,28 @@ function Send() {
       }
 
       setTxHash(hash);
-      await saveEncryptedRecord(intentId, "pending_chain", vaultKey, account, hash);
+      await saveEncryptedRecord(intentId, "pending_chain", key, account, hash);
       setFlowStep("chain");
       setFlowMessage("Transaction submitted. Waiting for Morph Hoodi receipt confirmation.");
 
       const receipt = await waitForTransactionReceipt(hash);
       if (receipt.status !== "0x1") {
-        await saveEncryptedRecord(intentId, "failed", vaultKey, account, hash);
+        await saveEncryptedRecord(intentId, "failed", key, account, hash);
         setFlowStep("failed");
         setFlowMessage("Morph returned a failed receipt. The record stays marked failed.");
+        notify.error("Transaction failed onchain", "Morph returned a failed receipt.");
         return;
       }
 
-      await saveEncryptedRecord(intentId, "confirmed", vaultKey, account, hash);
+      await saveEncryptedRecord(intentId, "confirmed", key, account, hash);
       setFlowStep("confirmed");
       setFlowMessage("Confirmed onchain and saved to your encrypted private ledger.");
+      notify.success("Payment confirmed", "Saved to your encrypted ledger.");
     } catch (error) {
       setFlowStep("failed");
-      setFlowMessage(error instanceof Error ? error.message : "Unable to create PayMemo intent.");
+      const text = error instanceof Error ? error.message : "Unable to create PayMemo intent.";
+      setFlowMessage(text);
+      notify.error("Send failed", text);
     } finally {
       setSending(false);
     }
@@ -369,12 +346,12 @@ function Send() {
 
   return (
     <>
-      <Topbar title="Send Payment" subtitle="Add meaning before you sign." />
+      <Topbar title="Send Payment" subtitle="Create a test payment with private context." />
 
       <div className="p-6 lg:p-10 grid lg:grid-cols-[1fr_440px] gap-8">
         <div className="space-y-8">
           {/* Wallet / Network bar */}
-          <div className="rounded-3xl bg-white p-4 shadow-float ring-1 ring-ink/10 flex flex-wrap items-center justify-between gap-3">
+          <div className="rounded-3xl border border-ink/25 bg-white p-4 shadow-float ring-1 ring-ink/10 flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-3">
               <button
                 onClick={prepareWallet}
@@ -387,21 +364,22 @@ function Send() {
                 <Network className="h-3 w-3" /> Morph Hoodi
               </span>
               <span className="hidden md:inline-flex items-center gap-1 text-xs text-ink/55">
-                <span className="h-1.5 w-1.5 rounded-full bg-mint animate-pulse-glow" /> Block
-                18,402,113
+                <span className="h-1.5 w-1.5 rounded-full bg-mint animate-pulse-glow" /> Live
+                Morph RPC
               </span>
             </div>
-            <div className="flex items-center gap-2 text-xs">
-              <WalletPill src="MetaMask" active />
-              <WalletPill src="WalletConnect" />
-              <WalletPill src="Coinbase" />
-              <WalletPill src="Rabby" />
-            </div>
-            <div className="basis-full text-xs text-ink/55">{walletMessage}</div>
+            <button
+              type="button"
+              onClick={prepareWallet}
+              className="rounded-xl border border-ink/25 bg-cream/70 px-3 py-2 text-xs font-semibold text-ink/70 hover:text-ink"
+            >
+              Choose wallet
+            </button>
+            <div className="basis-full text-xs font-semibold text-red-900">{walletMessage}</div>
           </div>
 
           {/* Mode toggle */}
-          <div className="rounded-3xl bg-white p-1.5 shadow-float ring-1 ring-ink/10 inline-flex">
+          <div className="rounded-3xl border border-ink/25 bg-white p-1.5 shadow-float ring-1 ring-ink/10 inline-flex">
             {(["single", "batch"] as const).map((m) => (
               <button
                 key={m}
@@ -414,7 +392,7 @@ function Send() {
           </div>
 
           {/* Form card */}
-          <div className="rounded-3xl bg-ink/[0.025] shadow-float ring-1 ring-ink/10 overflow-hidden">
+          <div className="rounded-3xl border border-ink/25 bg-ink/[0.025] shadow-float ring-1 ring-ink/10 overflow-hidden">
             {/* Asset picker bar */}
             <div className="px-7 pt-7 pb-2 flex items-center justify-between gap-4">
               <div>
@@ -436,14 +414,18 @@ function Send() {
                   Available
                 </div>
                 <div className="mt-2 font-mono text-sm font-semibold">
-                  {asset.balance.toLocaleString(undefined, { maximumFractionDigits: 4 })}{" "}
-                  {asset.symbol}
+                  {assetBalance
+                    ? `${assetBalance} ${asset.symbol}`
+                    : connected
+                      ? "Not loaded"
+                      : "Connect wallet"}
                 </div>
                 <div className="text-[11px] text-ink/50 font-mono">
-                  $
-                  {(asset.balance * asset.usd).toLocaleString(undefined, {
-                    maximumFractionDigits: 2,
-                  })}
+                  {asset.hoodiStatus === "env-required"
+                    ? `${asset.envContractKey} required`
+                    : asset.hoodiStatus === "official"
+                      ? "Official Hoodi token"
+                      : "Native token"}
                 </div>
               </div>
             </div>
@@ -471,7 +453,7 @@ function Send() {
                 </div>
 
                 <Field label="Amount">
-                  <div className="rounded-2xl bg-cream/50 p-5">
+                  <div className="rounded-2xl border border-ink/25 bg-white p-5 shadow-soft transition-shadow focus-within:border-mint focus-within:shadow-glow-mint">
                     <div className="flex items-baseline justify-between gap-3">
                       <input
                         value={single.amount}
@@ -479,28 +461,26 @@ function Send() {
                           setSingle({ ...single, amount: e.target.value.replace(/[^0-9.]/g, "") })
                         }
                         placeholder="0.00"
-                        className="bg-transparent outline-none w-full text-3xl font-semibold tracking-tight font-mono"
+                        inputMode="decimal"
+                        className="w-full bg-transparent text-3xl font-semibold tracking-tight font-mono outline-none placeholder:text-ink/30"
                       />
                       <span className="text-sm font-semibold">{asset.symbol}</span>
                     </div>
-                    <div className="mt-2 flex items-center justify-between text-xs text-ink/55">
-                      <span className="font-mono">
-                        ~ $
-                        {(Number(single.amount || 0) * asset.usd).toLocaleString(undefined, {
-                          maximumFractionDigits: 2,
-                        })}
-                      </span>
+                    <div className="mt-3 flex items-center justify-between text-xs text-ink/55">
+                      <span className="font-mono">Morph Hoodi {asset.symbol} · editable</span>
                       <div className="flex items-center gap-1.5">
                         {[25, 50, 75, 100].map((p) => (
                           <button
                             key={p}
+                            type="button"
+                            disabled={!assetBalance}
                             onClick={() =>
                               setSingle({
                                 ...single,
-                                amount: String(((asset.balance * p) / 100).toFixed(4)),
+                                amount: String(((Number(assetBalance || 0) * p) / 100)),
                               })
                             }
-                            className="px-2 py-0.5 rounded-md bg-white text-ink/70 text-[10px] font-semibold shadow-soft"
+                            className="rounded-md border border-ink/15 bg-white px-2 py-0.5 text-[10px] font-semibold text-ink/70 shadow-soft hover:border-ink/40 disabled:opacity-40"
                           >
                             {p === 100 ? "MAX" : `${p}%`}
                           </button>
@@ -613,27 +593,6 @@ function Send() {
               </Field>
             </div>
 
-            {/* Speed */}
-            <div className="px-7 pt-8 pb-8">
-              <Label>Network speed</Label>
-              <div className="mt-3 grid grid-cols-3 gap-2.5">
-                {SPEEDS.map((s) => (
-                  <button
-                    key={s.id}
-                    onClick={() => setSpeed(s.id)}
-                    className={`rounded-2xl p-4 text-left transition-all ${speed === s.id ? "bg-mint/15 shadow-glow-mint" : "bg-cream/50 hover:bg-cream"}`}
-                  >
-                    <div className="flex items-center gap-1.5 text-xs font-semibold">
-                      {s.id === "instant" && <Zap className="h-3 w-3 text-pink" />}
-                      {s.label}
-                    </div>
-                    <div className="mt-1 text-[11px] text-ink/55 font-mono">
-                      {s.time} · {s.gwei} gwei
-                    </div>
-                  </button>
-                ))}
-              </div>
-            </div>
           </div>
         </div>
 
@@ -643,6 +602,7 @@ function Send() {
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
             className="relative overflow-hidden rounded-3xl bg-white p-7 shadow-float ring-1 ring-ink/10"
+            style={{ border: "1px solid color-mix(in oklab, #0B0B0F 24%, transparent)" }}
           >
             <div className="absolute inset-x-0 top-0 h-1 bg-aurora" />
             <div className="text-[10px] font-extrabold uppercase tracking-[0.22em] text-pink">
@@ -659,34 +619,25 @@ function Send() {
               </div>
               <div className="mt-2 flex items-baseline gap-2">
                 <span className="text-3xl font-semibold tracking-tight font-mono">
-                  {totalAmount.toLocaleString(undefined, { maximumFractionDigits: 4 })}
+                  {totalAmount.toLocaleString(undefined, { maximumFractionDigits: 18 })}
                 </span>
                 <span className="text-sm font-semibold">{asset.symbol}</span>
               </div>
               <div className="text-xs text-ink/55 font-mono">
-                ${totalUsd.toLocaleString(undefined, { maximumFractionDigits: 2 })}
+                Balance: {assetBalance || "connect wallet"}
               </div>
               <div className="mt-3 flex items-center justify-center">
                 <ArrowDown className="h-4 w-4 text-ink/40" />
               </div>
               <div className="mt-1 text-xs text-ink/55">Recipient receives</div>
               <div className="font-mono text-sm font-semibold">
-                {totalAmount.toLocaleString(undefined, { maximumFractionDigits: 4 })} {asset.symbol}
+                {totalAmount.toLocaleString(undefined, { maximumFractionDigits: 18 })} {asset.symbol}
               </div>
             </div>
 
             <div className="mt-4 space-y-2.5 text-sm">
               <Row k="Network" v="Morph Hoodi" />
-              <Row k="Speed" v={SPEEDS.find((s) => s.id === speed)!.label} />
-              <Row
-                k={
-                  <span className="inline-flex items-center gap-1">
-                    <Fuel className="h-3 w-3" /> Gas
-                  </span>
-                }
-                v={`~$${gasUsd.toFixed(3)}`}
-                mono
-              />
+              <Row k="Wallet gas" v="Estimated by your wallet at signing" />
               <Row k="Tag" v={tag} />
               <Row
                 k="Encryption"
@@ -713,7 +664,7 @@ function Send() {
                   </div>
                 ))}
               </div>
-              <div className="mt-3 rounded-xl bg-white px-3 py-2 text-xs leading-5 text-ink/60">
+              <div className="mt-3 rounded-xl bg-white px-3 py-2 text-xs font-semibold leading-5 text-red-900">
                 {flowMessage}
                 {txHash && (
                   <div className="mt-1 font-mono text-[11px] text-ink">{shortAddress(txHash)}</div>
@@ -736,7 +687,7 @@ function Send() {
                   : "Connect Wallet to Sign"}
             </button>
             <div className="mt-3 text-center text-[11px] text-ink/50 inline-flex items-center justify-center gap-1 w-full">
-              <Info className="h-3 w-3" /> MetaMask will pop up to sign 1 transaction
+              <Info className="h-3 w-3" /> Your wallet will pop up to sign 1 transaction
             </div>
           </motion.div>
 
@@ -752,6 +703,12 @@ function Send() {
         </div>
       </div>
 
+      <WalletConnectModal
+        open={walletPickerOpen}
+        onClose={() => setWalletPickerOpen(false)}
+        onConnected={(account) => void onWalletConnected(account)}
+      />
+
       {/* Asset picker modal */}
       <AnimatePresence>
         {assetPickerOpen && (
@@ -759,7 +716,7 @@ function Send() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 grid place-items-center bg-ink/40 backdrop-blur-sm p-4"
+            className="fixed inset-0 z-50 grid place-items-center bg-ink/10 p-4"
             onClick={() => setAssetPickerOpen(false)}
           >
             <motion.div
@@ -804,20 +761,17 @@ function Send() {
                       <div className="text-sm font-semibold flex items-center gap-2">
                         {a.symbol}
                         <span className="text-[10px] uppercase tracking-widest text-ink/40">
-                          {a.type}
+                          {a.symbol === "BGB" ? "BGB" : a.type}
                         </span>
                       </div>
                       <div className="text-xs text-ink/55 truncate">{a.name}</div>
                     </div>
                     <div className="text-right">
                       <div className="text-sm font-mono">
-                        {a.balance.toLocaleString(undefined, { maximumFractionDigits: 4 })}
+                        {balances[a.symbol] ? balances[a.symbol] : connected ? "-" : "connect"}
                       </div>
                       <div className="text-[11px] text-ink/55 font-mono">
-                        $
-                        {(a.balance * a.usd).toLocaleString(undefined, {
-                          maximumFractionDigits: 2,
-                        })}
+                        {a.hoodiStatus === "env-required" ? "set env for Hoodi" : "Morph Hoodi"}
                       </div>
                     </div>
                     {asset.symbol === a.symbol && <Check className="h-4 w-4 text-mint" />}
@@ -830,28 +784,43 @@ function Send() {
       </AnimatePresence>
 
       <style>{`
-        .input { width: 100%; padding: 0.95rem 1.1rem; border-radius: 0.85rem; border: 1px solid transparent; background: #FFFFFF; box-shadow: inset 0 0 0 1px color-mix(in oklab, #0B0B0F 8%, transparent); font-size: 0.9rem; outline: none; transition: box-shadow .15s; }
-        .input:focus { box-shadow: inset 0 0 0 1px oklch(0.82 0.26 145), 0 0 0 3px color-mix(in oklab, oklch(0.82 0.26 145) 22%, transparent); }
+        .input { width: 100%; padding: 0.95rem 1.1rem; border-radius: 0.85rem; border: 1px solid color-mix(in oklab, #0B0B0F 22%, transparent); background: #FFFFFF; box-shadow: inset 0 0 0 1px color-mix(in oklab, #0B0B0F 6%, transparent); font-size: 0.9rem; outline: none; transition: box-shadow .15s, border-color .15s; }
+        .input:focus { border-color: oklch(0.82 0.26 145); box-shadow: inset 0 0 0 1px oklch(0.82 0.26 145), 0 0 0 3px color-mix(in oklab, oklch(0.82 0.26 145) 22%, transparent); }
         .shadow-float { box-shadow: 0 1px 2px rgba(11,11,15,0.03), 0 30px 60px -28px rgba(11,11,15,0.10); }
       `}</style>
     </>
   );
 }
 
-function WalletPill({ src, active }: { src: string; active?: boolean }) {
+function WalletPill({
+  src,
+  active,
+  onClick,
+}: {
+  src: string;
+  active?: boolean;
+  onClick?: () => void;
+}) {
   return (
-    <span
+    <button
+      type="button"
+      onClick={onClick}
       className={`hidden md:inline-flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-semibold ${active ? "bg-mint/20 text-ink" : "bg-cream/70 text-ink/55"}`}
     >
       {active && <span className="h-1 w-1 rounded-full bg-mint" />} {src}
-    </span>
+    </button>
   );
 }
 
 function AssetIcon({ symbol }: { symbol: string }) {
+  const token = morphTokens.find((item) => item.symbol === symbol);
   return (
-    <span className="grid h-8 w-8 place-items-center rounded-full bg-ink text-cream text-[10px] font-bold tracking-tight">
-      {symbol.slice(0, 4)}
+    <span className="grid h-8 w-8 place-items-center overflow-hidden rounded-full border border-ink/15 bg-white text-[10px] font-bold tracking-tight text-ink">
+      {token?.iconUrl ? (
+        <img src={token.iconUrl} alt={`${symbol} logo`} className="h-full w-full object-cover" />
+      ) : (
+        symbol.slice(0, 4)
+      )}
     </span>
   );
 }

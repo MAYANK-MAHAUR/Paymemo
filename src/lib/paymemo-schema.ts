@@ -44,7 +44,7 @@ export const payMemoRecordSchema = z.object({
   from: z.string().optional(),
   to: z.string().min(1),
   amount: z.string().min(1),
-  token: z.string().default("USDC"),
+  token: z.string().default("ETH"),
   category: z.enum(payMemoCategories),
   counterparty: z.string().optional(),
   note: z.string().optional(),
@@ -56,7 +56,20 @@ export const payMemoRecordSchema = z.object({
   agentReason: z.string().optional(),
   source: z.string().optional(),
   provider: z.string().optional(),
+  origin: z.string().optional(),
+  pageTitle: z.string().optional(),
+  method: z.string().optional(),
+  rawValue: z.string().optional(),
+  callData: z.string().optional(),
+  tokenContract: z.string().optional(),
+  transactionType: z.enum(["native", "erc20", "contract-call"]).optional(),
+  direction: z.enum(["incoming", "outgoing"]).optional(),
+  blockNumber: z.string().optional(),
+  confirmedAt: z.string().optional(),
+  detectionTiming: z.string().optional(),
+  reviewedAt: z.string().optional(),
   createdAt: z.string().optional(),
+  updatedAt: z.string().optional(),
 });
 
 export const agentMemoryRequestSchema = z.object({
@@ -67,7 +80,7 @@ export const agentMemoryRequestSchema = z.object({
   reason: z.string().min(1),
   to: z.string().min(1),
   amount: z.string().min(1),
-  token: z.string().default("USDC"),
+  token: z.string().default("ETH"),
   policy: z.enum(["approved", "under-limit", "needs-review"]).default("under-limit"),
   txHash: z.string().optional(),
 });
