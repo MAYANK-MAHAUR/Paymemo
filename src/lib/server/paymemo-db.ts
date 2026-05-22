@@ -459,17 +459,55 @@ export async function deleteUserDatabase(walletAddress: string) {
   };
 }
 
-function lowerWalletFields<T extends { from?: string; to?: string }>(record: T): T {
+function lowerWalletFields<T extends { from?: string; to?: string; txHash?: string }>(
+  record: T,
+): T {
   const next = { ...record };
   if (typeof next.from === "string") next.from = next.from.toLowerCase();
   if (typeof next.to === "string") next.to = next.to.toLowerCase();
+  // Normalize tx hash so dedup-by-hash queries always hit the same key
+  // regardless of casing differences between watchers.
+  if (typeof next.txHash === "string") next.txHash = next.txHash.toLowerCase();
   return next;
 }
 
 export async function addExtensionRecord(record: PayMemoRecord) {
   const normalized = lowerWalletFields(record);
   const updatedAt = new Date().toISOString();
+  const txHash = String(normalized.txHash || "").toLowerCase();
+
   if (isSupabaseEnabled()) {
+    // Dedup by txHash: the server scanner (Railway worker / Vercel cron) and
+    // the extension chain-watch can both observe the same on-chain tx and
+    // each create their own row with a different id. When a new write comes
+    // in for an existing txHash we adopt the first existing row's id so the
+    // upsert UPDATES that row (instead of inserting a duplicate), and we
+    // remove any other duplicates so a single tx never appears twice in
+    // the review queue.
+    if (txHash) {
+      const existing = await supabaseRequest<{ id: string }[]>(
+        `extension_records?select=id&record->>txHash=eq.${encodeURIComponent(txHash)}&limit=10`,
+      ).catch(() => [] as { id: string }[]);
+
+      if (existing.length > 0) {
+        const canonicalId = existing[0].id;
+        // Adopt the canonical id so the upsert below targets it.
+        normalized.id = canonicalId;
+        // Remove every other dup so we converge on a single row per tx.
+        const duplicateIds = existing
+          .slice(1)
+          .map((row) => row.id)
+          .filter((id) => id && id !== canonicalId);
+        if (duplicateIds.length > 0) {
+          const ids = duplicateIds.map((id) => `"${id}"`).join(",");
+          await supabaseRequest<unknown>(
+            `extension_records?id=in.(${encodeURIComponent(ids)})`,
+            { method: "DELETE" },
+          ).catch(() => null);
+        }
+      }
+    }
+
     await supabaseRequest<JsonRecordRow[]>("extension_records?on_conflict=id", {
       method: "POST",
       body: JSON.stringify({ id: normalized.id, record: normalized, updated_at: updatedAt }),
@@ -478,13 +516,24 @@ export async function addExtensionRecord(record: PayMemoRecord) {
     return normalized;
   }
 
-  await writePayMemoDb((db) => ({
-    ...db,
-    extensionRecords: [
-      normalized,
-      ...db.extensionRecords.filter((item) => item.id !== normalized.id),
-    ].slice(0, 250),
-  }));
+  await writePayMemoDb((db) => {
+    // Same dedup-by-txHash logic for the JSON-file fallback.
+    const keep = db.extensionRecords.filter((item) => {
+      if (item.id === normalized.id) return false;
+      if (
+        txHash &&
+        typeof item.txHash === "string" &&
+        item.txHash.toLowerCase() === txHash
+      ) {
+        return false;
+      }
+      return true;
+    });
+    return {
+      ...db,
+      extensionRecords: [normalized, ...keep].slice(0, 250),
+    };
+  });
   return normalized;
 }
 
