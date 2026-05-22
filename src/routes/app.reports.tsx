@@ -12,6 +12,7 @@ import {
 import { fetchEncryptedVaultRecords, type StoredVaultRecord } from "@/lib/paymemo-vault";
 import { fetchDomainRecords, type EncryptedDomainRecord } from "@/lib/paymemo-domain";
 import { notify } from "@/lib/notify";
+import { parseAmountNumber } from "@/lib/amount-utils";
 
 export const Route = createFileRoute("/app/reports")({
   head: () => ({ meta: [{ title: "Reports | PayMemo" }] }),
@@ -217,7 +218,7 @@ async function vaultToReportRow(record: StoredVaultRecord, key: CryptoKey): Prom
     type: record.publicRecord.mode,
     status: record.publicRecord.status,
     txHash: record.publicRecord.txHash ?? "",
-    amount: Number(record.publicRecord.amount || 0),
+    amount: parseAmountNumber(record.publicRecord.amount),
     token: record.publicRecord.token,
     category: metadata.category || "Other",
     counterparty: metadata.counterparty || "",
@@ -232,7 +233,7 @@ async function domainToReportRow(record: EncryptedDomainRecord, key: CryptoKey):
     type: record.type,
     status: record.status,
     txHash: String(record.publicData.txHash ?? ""),
-    amount: Number(record.publicData.amount ?? record.publicData.totalAmount ?? 0),
+    amount: parseAmountNumber(record.publicData.amount ?? record.publicData.totalAmount ?? 0),
     token: String(record.publicData.token ?? "ETH"),
     category: metadata.category || record.type,
     counterparty: metadata.client || metadata.tool || metadata.batchName || "",

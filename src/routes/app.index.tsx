@@ -15,6 +15,7 @@ import {
   type StoredVaultRecord,
 } from "@/lib/paymemo-vault";
 import { morphTokens } from "@/lib/morph";
+import { parseAmountNumber } from "@/lib/amount-utils";
 import {
   readPartnerWallets,
   registerWatchedWalletOnServer,
@@ -571,6 +572,14 @@ function toLockedRow(record: StoredVaultRecord, walletAddress: string): Dashboar
   });
 }
 
+/**
+ * Parse an amount string into a finite number, tolerating things like
+ * `"0.000001 ETH"` (chain-watch records embed the token symbol), commas
+ * (`"1,234.5"`), and stray whitespace. Returns 0 if nothing usable.
+ *
+ * Shared implementation lives in `src/lib/amount-utils.ts`.
+ */
+
 function toRow(
   record: StoredVaultRecord,
   walletAddress: string,
@@ -584,7 +593,7 @@ function toRow(
     date: new Date(created).toLocaleDateString(),
     month: created.slice(0, 7),
     type: wallet && from === wallet ? "Sent" : "Received",
-    amount: Number(record.publicRecord.amount || 0),
+    amount: parseAmountNumber(record.publicRecord.amount),
     token: record.publicRecord.token,
     category: privateFields.category,
     counterparty: privateFields.counterparty,

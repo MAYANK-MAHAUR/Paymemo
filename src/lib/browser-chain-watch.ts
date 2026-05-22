@@ -132,14 +132,19 @@ function findKnownToken(contract: string) {
   );
 }
 
+// IMPORTANT: amount strings stored on a PayMemo record must be a clean
+// numeric string ("0.000001"), not "0.000001 ETH". Token symbol lives on
+// the separate `token` field. Embedding the symbol breaks `Number(...)`
+// math everywhere — see the `NaN ETH` regression. Use these helpers
+// instead of building amount strings inline.
 function describeNativeAmount(rawValue: string) {
   const value = hexToBigInt(rawValue);
-  if (value === 0n) return "0 ETH";
-  return `${formatUnits(value, 18, 6)} ETH`;
+  if (value === 0n) return "0";
+  return formatUnits(value, 18, 6);
 }
 
-function describeErc20Amount(value: bigint, decimals: number, symbol: string) {
-  return `${formatUnits(value, decimals, 6)} ${symbol}`;
+function describeErc20Amount(value: bigint, decimals: number) {
+  return formatUnits(value, decimals, 6);
 }
 
 export type DetectedRecord = {
@@ -216,7 +221,7 @@ function buildErc20Record(log: RawLog, watched: Set<string>): DetectedRecord | n
     txHash: log.transactionHash,
     from,
     to,
-    amount: describeErc20Amount(parsed.value, decimals, symbol),
+    amount: describeErc20Amount(parsed.value, decimals),
     token: symbol,
     direction: isOutgoing ? "outgoing" : "incoming",
     transactionType: "erc20",

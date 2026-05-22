@@ -13,7 +13,7 @@ const categories = [
 
 let records = [];
 let settings = {};
-let panelStatus = "Detected Morph transactions without a memo stay in Needs Review until the user explains them.";
+let panelStatus = "Fill in the memo and save — the record goes straight to your dashboard's Completed tab.";
 const urlParams = new URLSearchParams(location.search);
 const focusedRecordId = urlParams.get("record") || "";
 const popupMode = urlParams.get("popup") === "1";
@@ -110,102 +110,45 @@ function card(record) {
 function render() {
   const root = document.querySelector("#app");
 
-  // PRESERVE user input across re-renders. The 3.5s scan tick triggers a
-  // full innerHTML rebuild — without this, anything the user is typing
-  // into #watchAddress or #watchLabel gets wiped on every poll, making
-  // it impossible to enter a wallet address slowly.
+  // PRESERVE user input across re-renders. Memo fields and category chips
+  // are inside `.tx-card` so a full innerHTML rebuild would wipe whatever
+  // the user is typing. Snapshot + restore around the render.
   const preservedInputs = new Map();
   root.querySelectorAll("input, textarea").forEach((el) => {
-    if (el.id) preservedInputs.set(el.id, { value: el.value, focused: document.activeElement === el });
+    if (el.dataset.field || el.id) {
+      const k = el.dataset.recordField
+        ? `${el.dataset.recordField}:${el.dataset.field}`
+        : el.id || el.dataset.field;
+      preservedInputs.set(k, { value: el.value });
+    }
   });
   const previouslyFocusedId = document.activeElement?.id || "";
 
+  // The sidepanel is now capture-only: detected tx → fill memo → save.
+  // No wallet watcher form, no "Morph tx memory" review surface — that's
+  // what /app/review on the dApp is for. The header just frames the
+  // single transaction prompt.
   const latest = records[0];
-  const watchedAddresses = normalizeAddresses(settings.watchedAddresses);
-  const watchedLabels = settings.watchedWalletLabels || {};
-  const showWatcher = !popupMode;
-  const watchedList = watchedAddresses.length
-    ? watchedAddresses
-        .slice(0, 4)
-        .map(
-          (address) =>
-            `<span class="watch-pill">${escapeHtml(watchedLabels[address] || shorten(address))}</span>`,
-        )
-        .join("")
-    : `<span class="watch-pill muted">No wallet yet</span>`;
   root.innerHTML = `
     <div class="shell">
       <header>
         <img class="logo" src="icons/icon-48.png" width="40" height="40" alt="PayMemo" />
         <div>
-          <span class="eyebrow">${popupMode ? "PayMemo transaction prompt" : "PayMemo Side Panel"}</span>
-          <h1>${popupMode ? "Transaction detected" : "Morph tx memory"}</h1>
-          <p class="subtitle">${popupMode ? "Add the category, counterparty, note, and project for this Morph transaction." : "Listen to a wallet address. When any incoming or outgoing Morph tx is detected, PayMemo pops up and asks what it was for."}</p>
+          <span class="eyebrow">PayMemo capture</span>
+          <h1>Tag this transaction</h1>
+          <p class="subtitle">Add the category and a private note. Saved memos go straight to your dashboard's Completed tab — encrypted in your vault.</p>
         </div>
       </header>
       <div class="scroll">
-        ${showWatcher ? `<section class="tx-card watcher-card">
-          <div class="tx-top">
-            <div>
-              <span class="mini-label">Watcher</span>
-              <div class="amount">${settings.chainWatchEnabled ? "Live" : "Paused"}</div>
-              <p class="hint">Watching ${watchedAddresses.length} Morph address${watchedAddresses.length === 1 ? "" : "es"} for incoming and outgoing transactions.</p>
-            </div>
-            <button class="primary" id="scanNow" type="button">Scan</button>
-          </div>
-          <div class="watch-pills">${watchedList}</div>
-          <div class="field-grid watch-form">
-            <label>Wallet address<input id="watchAddress" placeholder="0x..." /></label>
-            <label>Wallet name<input id="watchLabel" placeholder="Main wallet" /></label>
-          </div>
-          <div class="panel-actions">
-            <button class="primary" id="startWatch" type="button">Start listening</button>
-          </div>
-        </section>` : ""}
-        ${latest ? records.map(card).join("") : `<div class="empty">${popupMode ? "Loading detected transaction..." : "No Morph chain-watch records yet. Send a Morph Hoodi tx from a watched wallet and PayMemo will ask for the memo."}</div>`}
+        ${
+          latest
+            ? records.map(card).join("")
+            : `<div class="empty">No detected transactions yet. The next Morph Hoodi tx on a watched wallet will appear here automatically.</div>`
+        }
       </div>
       <div class="status-line">${escapeHtml(panelStatus)}</div>
     </div>
   `;
-
-  root.querySelector("#scanNow")?.addEventListener("click", async () => {
-    await sendMessage({ type: "PAYMEMO_SCAN_MORPH_NOW" });
-    await load();
-  });
-
-  root.querySelector("#startWatch")?.addEventListener("click", async () => {
-    const address = normalizeAddress(root.querySelector("#watchAddress")?.value);
-    const label = root.querySelector("#watchLabel")?.value.trim();
-    if (!address) {
-      panelStatus = "Paste a valid 0x wallet address to start listening.";
-      render();
-      return;
-    }
-
-    const existing = normalizeAddresses(settings.watchedAddresses);
-    const watchedWalletLabels = { ...(settings.watchedWalletLabels || {}) };
-    if (label) watchedWalletLabels[address] = label;
-    const response = await sendMessage({
-      type: "PAYMEMO_SAVE_SETTINGS",
-      settings: {
-        ...settings,
-        chainWatchEnabled: true,
-        autoOpenChainWatchPrompt: true,
-        watchedAddresses: [address, ...existing.filter((item) => item !== address)],
-        watchedWalletLabels,
-      },
-    });
-
-    if (!response.ok) {
-      panelStatus = response.error || "Could not save this watched wallet.";
-      render();
-      return;
-    }
-
-    panelStatus = `Listening for Morph transactions on ${shorten(address)}. PayMemo will pop up when one appears.`;
-    await sendMessage({ type: "PAYMEMO_SCAN_MORPH_NOW" });
-    await load();
-  });
 
   root.querySelectorAll("[data-category]").forEach((button) => {
     button.addEventListener("click", () => {
@@ -247,11 +190,11 @@ function render() {
       if (button.dataset.sync) {
         const synced = await sendMessage({ type: "PAYMEMO_SYNC_RECORD", id, removeLocal: true });
         panelStatus = synced.ok
-          ? "Saved and synced. This transaction was removed from extension storage and is now in the dApp Review tab."
+          ? "Saved. The memo is now in your dashboard's Completed tab."
           : synced.error || "Saved locally, but dApp sync failed.";
         if (popupMode) window.close();
       } else {
-        panelStatus = "Saved locally. Use Save & sync to send it to the dApp Review tab.";
+        panelStatus = "Saved locally. Click Save & sync to push it to the dashboard.";
       }
       await load();
     });

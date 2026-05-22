@@ -31,10 +31,24 @@ export const Route = createFileRoute("/app/review")({
 
 function ReviewQueue() {
   const extensionQuery = useExtensionRecords();
+  // Pending = records that landed via chain-watch / extension and still
+  // need a memo. Anything `needs-review` or earlier-state belongs here.
   const extensionRecords = useMemo<ReviewItem[]>(
     () =>
       (extensionQuery.data ?? [])
         .filter((record) => record.status !== "confirmed")
+        .map((record, index) => toReviewItem(record, index)),
+    [extensionQuery.data],
+  );
+  // Extension memos the user has already filled in. These come through
+  // `/api/extension-intent` with status="confirmed" — they're the records
+  // saved from the extension popup/sidepanel after the user tagged them.
+  // We surface them on the Completed tab alongside vault records so the
+  // extension flow doesn't get stuck in "Pending" purgatory.
+  const extensionConfirmedRecords = useMemo<ReviewItem[]>(
+    () =>
+      (extensionQuery.data ?? [])
+        .filter((record) => record.status === "confirmed")
         .map((record, index) => toReviewItem(record, index)),
     [extensionQuery.data],
   );
@@ -101,7 +115,25 @@ function ReviewQueue() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab]);
 
-  const visibleRecords = activeTab === "pending" ? extensionRecords : completedRecords;
+  // Completed view = vault (encrypted, edit-on-the-fly) UNION extension-saved
+  // confirmed records (plaintext, came from the popup/sidepanel). De-dupe
+  // by tx hash so we don't show the same payment twice if it lives in both
+  // tables.
+  const completedCombined = useMemo<ReviewItem[]>(() => {
+    const merged: ReviewItem[] = [...completedRecords];
+    const seenHashes = new Set(
+      merged.map((item) => item.hash.toLowerCase()).filter(Boolean),
+    );
+    for (const item of extensionConfirmedRecords) {
+      const hash = item.hash.toLowerCase();
+      if (hash && seenHashes.has(hash)) continue;
+      if (hash) seenHashes.add(hash);
+      merged.push(item);
+    }
+    return merged;
+  }, [completedRecords, extensionConfirmedRecords]);
+
+  const visibleRecords = activeTab === "pending" ? extensionRecords : completedCombined;
 
   const walletBuckets = useMemo(() => {
     const main = ownerWallet ? ownerWallet.toLowerCase() : "";
@@ -428,7 +460,7 @@ function ReviewQueue() {
           <div className="flex items-center gap-2 border-b border-ink/15 px-5 py-3">
             {(["pending", "completed"] as const).map((tab) => {
               const isActive = activeTab === tab;
-              const count = tab === "pending" ? extensionRecords.length : completedRecords.length;
+              const count = tab === "pending" ? extensionRecords.length : completedCombined.length;
               return (
                 <button
                   key={tab}
