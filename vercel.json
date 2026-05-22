@@ -2,5 +2,11 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "buildCommand": "npm run build && node scripts/vercel-build.mjs",
   "installCommand": "npm install",
-  "framework": null
+  "framework": null,
+  "crons": [
+    {
+      "path": "/api/cron/scan-morph",
+      "schedule": "0 */6 * * *"
+    }
+  ]
 }

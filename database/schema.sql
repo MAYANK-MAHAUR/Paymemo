@@ -35,6 +35,25 @@ create table if not exists extension_pairings (
 create index if not exists extension_pairings_wallet_idx
   on extension_pairings (wallet_address);
 
+-- Wallets the user wants PayMemo to scan on Morph Hoodi, server-side, even
+-- while their tab is closed. The owner is the connected vault wallet; the
+-- watched address may equal the owner (watch your own wallet) or be a
+-- counterparty (watch a partner). last_scanned_block lets the cron resume
+-- where it left off.
+create table if not exists watched_wallets (
+  owner_wallet text not null,
+  watched_address text not null,
+  label text,
+  enabled boolean not null default true,
+  last_scanned_block bigint not null default 0,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  primary key (owner_wallet, watched_address)
+);
+
+create index if not exists watched_wallets_enabled_idx
+  on watched_wallets (enabled, watched_address) where enabled = true;
+
 create table if not exists agent_memory_records (
   id text primary key,
   record jsonb not null,
@@ -186,6 +205,7 @@ alter table if exists vault_records enable row level security;
 alter table if exists extension_records enable row level security;
 alter table if exists agent_memory_records enable row level security;
 alter table if exists paymemo_domain_records enable row level security;
+alter table if exists watched_wallets enable row level security;
 alter table if exists users enable row level security;
 alter table if exists payment_intents enable row level security;
 alter table if exists transactions enable row level security;
@@ -217,6 +237,12 @@ create policy "service role manages agent memory records"
 drop policy if exists "service role manages domain records" on paymemo_domain_records;
 create policy "service role manages domain records"
   on paymemo_domain_records for all
+  using (auth.role() = 'service_role')
+  with check (auth.role() = 'service_role');
+
+drop policy if exists "service role manages watched wallets" on watched_wallets;
+create policy "service role manages watched wallets"
+  on watched_wallets for all
   using (auth.role() = 'service_role')
   with check (auth.role() = 'service_role');
 

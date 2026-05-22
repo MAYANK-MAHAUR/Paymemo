@@ -48,7 +48,7 @@ function renderItem(it: NavItem, active: boolean) {
       key={it.to}
       to={it.to}
       className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-colors ${
-        active ? "bg-ink text-cream shadow-soft" : "text-ink/70 hover:bg-ink/5 hover:text-ink"
+        active ? "bg-ink text-cream shadow-soft" : "text-ink/82 hover:bg-ink/5 hover:text-ink"
       }`}
     >
       <Icon className="h-4 w-4" />
@@ -103,7 +103,7 @@ export function AppSidebar() {
           onClick={() => setMoreOpen((value) => !value)}
           aria-expanded={moreOpen}
           className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-colors ${
-            moreActive ? "bg-ink/5 text-ink" : "text-ink/70 hover:bg-ink/5 hover:text-ink"
+            moreActive ? "bg-ink/5 text-ink" : "text-ink/82 hover:bg-ink/5 hover:text-ink"
           }`}
         >
           <MoreHorizontal className="h-4 w-4" />

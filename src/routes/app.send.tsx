@@ -101,7 +101,10 @@ function newRecipient(): Recipient {
 type FlowStep = "idle" | "intent" | "signature" | "chain" | "confirmed" | "failed";
 
 function Send() {
-  const [mode, setMode] = useState<"single" | "batch">("single");
+  // Batch mode lives at /app/batch — this page is single-send only. We keep
+  // the variable so the existing `mode === "batch"` branches stay tree-shake
+  // friendly without TS narrowing them to dead-code comparisons.
+  const mode = "single" as "single" | "batch";
   const [walletAddress, setWalletAddress] = useState("");
   const [walletPickerOpen, setWalletPickerOpen] = useState(false);
   const [walletMessage, setWalletMessage] = useState(
@@ -164,6 +167,19 @@ function Send() {
     setWalletMessage("Please connect wallet before continuing.");
     setWalletPickerOpen(true);
   };
+
+  // Hydrate from the global vault session (set by `/app` or any other connect
+  // flow) so the user doesn't have to reconnect just to open /app/send.
+  useEffect(() => {
+    const session = readVaultSession();
+    if (!session?.walletAddress) return;
+    setWalletAddress(session.walletAddress);
+    setWalletMessage(
+      `Wallet connected from a prior step: ${session.walletAddress.slice(0, 6)}…${session.walletAddress.slice(-4)}.`,
+    );
+    void loadTokenBalances(session.walletAddress);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   async function onWalletConnected(account: string) {
     setWalletAddress(account);
@@ -283,11 +299,13 @@ function Send() {
         session?.walletAddress.toLowerCase() === account.toLowerCase()
           ? await getRememberedVaultKey()
           : null;
-      const key = vaultKey ?? (await (async () => {
-        const signature = await signVaultUnlock(account);
-        rememberVaultSession(account, signature);
-        return deriveVaultKey(signature, account);
-      })());
+      const key =
+        vaultKey ??
+        (await (async () => {
+          const signature = await signVaultUnlock(account);
+          rememberVaultSession(account, signature);
+          return deriveVaultKey(signature, account);
+        })());
 
       await saveEncryptedRecord(intentId, "pending_signature", key, account);
       setFlowStep("signature");
@@ -295,7 +313,9 @@ function Send() {
 
       let hash = "";
       if (!canTransferAsset) {
-        throw new Error(`${asset.symbol} is visible for PayMemo records, but no Morph Hoodi contract is configured for live transfers.`);
+        throw new Error(
+          `${asset.symbol} is visible for PayMemo records, but no Morph Hoodi contract is configured for live transfers.`,
+        );
       }
 
       if (asset.symbol === "ETH") {
@@ -317,6 +337,19 @@ function Send() {
       }
 
       setTxHash(hash);
+      // Tell the PayMemo extension (if installed) that this tx is already
+      // memo'd by the dApp itself, so its chain watcher doesn't pop up a
+      // duplicate review prompt for the same hash.
+      if (typeof window !== "undefined") {
+        window.postMessage(
+          {
+            type: "PAYMEMO_DAPP_TX_HANDLED",
+            txHash: hash,
+            origin: "paymemo-dapp-send",
+          },
+          window.location.origin,
+        );
+      }
       await saveEncryptedRecord(intentId, "pending_chain", key, account, hash);
       setFlowStep("chain");
       setFlowMessage("Transaction submitted. Waiting for Morph Hoodi receipt confirmation.");
@@ -363,40 +396,29 @@ function Send() {
               <span className="hidden sm:inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full bg-mint/15 border border-mint/30 text-ink">
                 <Network className="h-3 w-3" /> Morph Hoodi
               </span>
-              <span className="hidden md:inline-flex items-center gap-1 text-xs text-ink/55">
-                <span className="h-1.5 w-1.5 rounded-full bg-mint animate-pulse-glow" /> Live
-                Morph RPC
+              <span className="hidden md:inline-flex items-center gap-1 text-xs text-ink/75">
+                <span className="h-1.5 w-1.5 rounded-full bg-mint animate-pulse-glow" /> Live Morph
+                RPC
               </span>
             </div>
             <button
               type="button"
               onClick={prepareWallet}
-              className="rounded-xl border border-ink/25 bg-cream/70 px-3 py-2 text-xs font-semibold text-ink/70 hover:text-ink"
+              className="rounded-xl border border-ink/25 bg-cream/70 px-3 py-2 text-xs font-semibold text-ink/82 hover:text-ink"
             >
               Choose wallet
             </button>
             <div className="basis-full text-xs font-semibold text-red-900">{walletMessage}</div>
           </div>
 
-          {/* Mode toggle */}
-          <div className="rounded-3xl border border-ink/25 bg-white p-1.5 shadow-float ring-1 ring-ink/10 inline-flex">
-            {(["single", "batch"] as const).map((m) => (
-              <button
-                key={m}
-                onClick={() => setMode(m)}
-                className={`px-5 py-2 rounded-2xl text-sm font-semibold capitalize transition-colors ${mode === m ? "bg-ink text-cream" : "text-ink/60 hover:text-ink"}`}
-              >
-                {m === "single" ? "Single Send" : `Batch (${batch.length})`}
-              </button>
-            ))}
-          </div>
+          {/* Single-send only. For multi-recipient flows see /app/batch. */}
 
           {/* Form card */}
           <div className="rounded-3xl border border-ink/25 bg-ink/[0.025] shadow-float ring-1 ring-ink/10 overflow-hidden">
             {/* Asset picker bar */}
             <div className="px-7 pt-7 pb-2 flex items-center justify-between gap-4">
               <div>
-                <div className="text-[10px] font-extrabold uppercase tracking-[0.2em] text-ink/55">
+                <div className="text-[10px] font-extrabold uppercase tracking-[0.2em] text-ink/75">
                   Paying with
                 </div>
                 <button
@@ -405,12 +427,12 @@ function Send() {
                 >
                   <AssetIcon symbol={asset.symbol} />
                   <span className="font-semibold">{asset.symbol}</span>
-                  <span className="text-ink/50">{asset.name}</span>
-                  <ChevronDown className="h-4 w-4 text-ink/40" />
+                  <span className="text-ink/72">{asset.name}</span>
+                  <ChevronDown className="h-4 w-4 text-ink/65" />
                 </button>
               </div>
               <div className="text-right">
-                <div className="text-[10px] font-extrabold uppercase tracking-[0.2em] text-ink/55">
+                <div className="text-[10px] font-extrabold uppercase tracking-[0.2em] text-ink/75">
                   Available
                 </div>
                 <div className="mt-2 font-mono text-sm font-semibold">
@@ -420,7 +442,7 @@ function Send() {
                       ? "Not loaded"
                       : "Connect wallet"}
                 </div>
-                <div className="text-[11px] text-ink/50 font-mono">
+                <div className="text-[11px] text-ink/72 font-mono">
                   {asset.hoodiStatus === "env-required"
                     ? `${asset.envContractKey} required`
                     : asset.hoodiStatus === "official"
@@ -462,11 +484,11 @@ function Send() {
                         }
                         placeholder="0.00"
                         inputMode="decimal"
-                        className="w-full bg-transparent text-3xl font-semibold tracking-tight font-mono outline-none placeholder:text-ink/30"
+                        className="w-full bg-transparent text-3xl font-semibold tracking-tight font-mono outline-none placeholder:text-ink/55"
                       />
                       <span className="text-sm font-semibold">{asset.symbol}</span>
                     </div>
-                    <div className="mt-3 flex items-center justify-between text-xs text-ink/55">
+                    <div className="mt-3 flex items-center justify-between text-xs text-ink/75">
                       <span className="font-mono">Morph Hoodi {asset.symbol} · editable</span>
                       <div className="flex items-center gap-1.5">
                         {[25, 50, 75, 100].map((p) => (
@@ -477,10 +499,10 @@ function Send() {
                             onClick={() =>
                               setSingle({
                                 ...single,
-                                amount: String(((Number(assetBalance || 0) * p) / 100)),
+                                amount: String((Number(assetBalance || 0) * p) / 100),
                               })
                             }
-                            className="rounded-md border border-ink/15 bg-white px-2 py-0.5 text-[10px] font-semibold text-ink/70 shadow-soft hover:border-ink/40 disabled:opacity-40"
+                            className="rounded-md border border-ink/15 bg-white px-2 py-0.5 text-[10px] font-semibold text-ink/82 shadow-soft hover:border-ink/40 disabled:opacity-40"
                           >
                             {p === 100 ? "MAX" : `${p}%`}
                           </button>
@@ -504,7 +526,7 @@ function Send() {
             {/* Batch mode */}
             {mode === "batch" && (
               <div className="px-7 pt-8 pb-4 space-y-3">
-                <div className="text-xs text-ink/55 flex items-center justify-between">
+                <div className="text-xs text-ink/75 flex items-center justify-between">
                   <span>One signature, all transfers atomic.</span>
                   <button className="inline-flex items-center gap-1 text-ink hover:text-pink">
                     <Wand2 className="h-3 w-3" /> Import CSV
@@ -515,7 +537,7 @@ function Send() {
                     key={r.id}
                     className="grid grid-cols-[28px_1fr_1fr_140px_28px] gap-2 items-center bg-cream/50 rounded-2xl px-3 py-2.5"
                   >
-                    <span className="text-[11px] font-mono text-ink/40 text-center">{i + 1}</span>
+                    <span className="text-[11px] font-mono text-ink/65 text-center">{i + 1}</span>
                     <input
                       value={r.address}
                       onChange={(e) =>
@@ -551,13 +573,13 @@ function Send() {
                         placeholder="0.00"
                         className="input bg-white text-sm pr-12 font-mono text-right"
                       />
-                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[11px] font-semibold text-ink/55">
+                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[11px] font-semibold text-ink/75">
                         {asset.symbol}
                       </span>
                     </div>
                     <button
                       onClick={() => setBatch(batch.filter((b) => b.id !== r.id))}
-                      className="grid place-items-center text-ink/40 hover:text-pink"
+                      className="grid place-items-center text-ink/65 hover:text-pink"
                     >
                       <Trash2 className="h-4 w-4" />
                     </button>
@@ -565,7 +587,7 @@ function Send() {
                 ))}
                 <button
                   onClick={() => setBatch([...batch, newRecipient()])}
-                  className="w-full inline-flex items-center justify-center gap-2 rounded-2xl border border-dashed border-ink/30 py-3 text-sm font-semibold text-ink/60 hover:border-ink/50 hover:text-ink transition-colors"
+                  className="w-full inline-flex items-center justify-center gap-2 rounded-2xl border border-dashed border-ink/30 py-3 text-sm font-semibold text-ink/78 hover:border-ink/50 hover:text-ink transition-colors"
                 >
                   <Plus className="h-4 w-4" /> Add recipient
                 </button>
@@ -581,7 +603,7 @@ function Send() {
                     <button
                       key={c}
                       onClick={() => setCat(c)}
-                      className={`text-sm px-3.5 py-1.5 rounded-full transition-all ${cat === c ? "bg-ink text-cream shadow-soft" : "bg-cream/60 text-ink/70 hover:bg-cream"}`}
+                      className={`text-sm px-3.5 py-1.5 rounded-full transition-all ${cat === c ? "bg-ink text-cream shadow-soft" : "bg-cream/60 text-ink/82 hover:bg-cream"}`}
                     >
                       {c}
                     </button>
@@ -592,7 +614,6 @@ function Send() {
                 <input value={tag} onChange={(e) => setTag(e.target.value)} className="input" />
               </Field>
             </div>
-
           </div>
         </div>
 
@@ -612,8 +633,8 @@ function Send() {
 
             <div className="mt-5 rounded-2xl bg-cream/60 p-5">
               <div className="flex items-center justify-between">
-                <span className="text-xs text-ink/55">You send</span>
-                <span className="text-xs text-ink/55">
+                <span className="text-xs text-ink/75">You send</span>
+                <span className="text-xs text-ink/75">
                   {mode === "batch" ? `${batch.length} recipients` : "1 recipient"}
                 </span>
               </div>
@@ -623,15 +644,16 @@ function Send() {
                 </span>
                 <span className="text-sm font-semibold">{asset.symbol}</span>
               </div>
-              <div className="text-xs text-ink/55 font-mono">
+              <div className="text-xs text-ink/75 font-mono">
                 Balance: {assetBalance || "connect wallet"}
               </div>
               <div className="mt-3 flex items-center justify-center">
-                <ArrowDown className="h-4 w-4 text-ink/40" />
+                <ArrowDown className="h-4 w-4 text-ink/65" />
               </div>
-              <div className="mt-1 text-xs text-ink/55">Recipient receives</div>
+              <div className="mt-1 text-xs text-ink/75">Recipient receives</div>
               <div className="font-mono text-sm font-semibold">
-                {totalAmount.toLocaleString(undefined, { maximumFractionDigits: 18 })} {asset.symbol}
+                {totalAmount.toLocaleString(undefined, { maximumFractionDigits: 18 })}{" "}
+                {asset.symbol}
               </div>
             </div>
 
@@ -650,7 +672,7 @@ function Send() {
             </div>
 
             <div className="mt-6 rounded-2xl bg-cream/70 p-4">
-              <div className="text-[10px] uppercase tracking-widest text-ink/55">Lifecycle</div>
+              <div className="text-[10px] uppercase tracking-widest text-ink/75">Lifecycle</div>
               <div className="mt-2 grid grid-cols-4 gap-2 text-[10px] uppercase tracking-widest">
                 {[
                   ["Intent", lifecycleOn.Intent],
@@ -660,7 +682,7 @@ function Send() {
                 ].map(([s, on]) => (
                   <div key={s as string} className="flex flex-col items-center gap-1">
                     <div className={`h-1.5 w-full rounded-full ${on ? "bg-pink" : "bg-ink/10"}`} />
-                    <span className={on ? "text-ink" : "text-ink/40"}>{s as string}</span>
+                    <span className={on ? "text-ink" : "text-ink/65"}>{s as string}</span>
                   </div>
                 ))}
               </div>
@@ -686,7 +708,7 @@ function Send() {
                     : "Create Intent & Sign"
                   : "Connect Wallet to Sign"}
             </button>
-            <div className="mt-3 text-center text-[11px] text-ink/50 inline-flex items-center justify-center gap-1 w-full">
+            <div className="mt-3 text-center text-[11px] text-ink/72 inline-flex items-center justify-center gap-1 w-full">
               <Info className="h-3 w-3" /> Your wallet will pop up to sign 1 transaction
             </div>
           </motion.div>
@@ -695,7 +717,7 @@ function Send() {
             <div className="font-semibold inline-flex items-center gap-1.5">
               <Shield className="h-4 w-4 text-mint" /> How encryption works
             </div>
-            <p className="mt-1 text-ink/60">
+            <p className="mt-1 text-ink/78">
               Your note, tag, and counterparty are encrypted with AES-256 on your device. Only your
               wallet can decrypt the vault.
             </p>
@@ -730,14 +752,14 @@ function Send() {
                 <div className="text-sm font-semibold">Select asset</div>
                 <button
                   onClick={() => setAssetPickerOpen(false)}
-                  className="text-ink/40 hover:text-ink"
+                  className="text-ink/65 hover:text-ink"
                 >
                   <X className="h-4 w-4" />
                 </button>
               </div>
               <div className="px-5 pb-4">
                 <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-ink/40" />
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-ink/65" />
                   <input
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
@@ -760,17 +782,17 @@ function Send() {
                     <div className="flex-1 min-w-0">
                       <div className="text-sm font-semibold flex items-center gap-2">
                         {a.symbol}
-                        <span className="text-[10px] uppercase tracking-widest text-ink/40">
+                        <span className="text-[10px] uppercase tracking-widest text-ink/65">
                           {a.symbol === "BGB" ? "BGB" : a.type}
                         </span>
                       </div>
-                      <div className="text-xs text-ink/55 truncate">{a.name}</div>
+                      <div className="text-xs text-ink/75 truncate">{a.name}</div>
                     </div>
                     <div className="text-right">
                       <div className="text-sm font-mono">
                         {balances[a.symbol] ? balances[a.symbol] : connected ? "-" : "connect"}
                       </div>
-                      <div className="text-[11px] text-ink/55 font-mono">
+                      <div className="text-[11px] text-ink/75 font-mono">
                         {a.hoodiStatus === "env-required" ? "set env for Hoodi" : "Morph Hoodi"}
                       </div>
                     </div>
@@ -805,7 +827,7 @@ function WalletPill({
     <button
       type="button"
       onClick={onClick}
-      className={`hidden md:inline-flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-semibold ${active ? "bg-mint/20 text-ink" : "bg-cream/70 text-ink/55"}`}
+      className={`hidden md:inline-flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-semibold ${active ? "bg-mint/20 text-ink" : "bg-cream/70 text-ink/75"}`}
     >
       {active && <span className="h-1 w-1 rounded-full bg-mint" />} {src}
     </button>
@@ -827,7 +849,7 @@ function AssetIcon({ symbol }: { symbol: string }) {
 
 function Label({ children }: { children: React.ReactNode }) {
   return (
-    <div className="text-[11px] font-extrabold uppercase tracking-[0.22em] text-ink/55">
+    <div className="text-[11px] font-extrabold uppercase tracking-[0.22em] text-ink/75">
       {children}
     </div>
   );
@@ -843,7 +865,7 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 function Row({ k, v, mono }: { k: React.ReactNode; v: React.ReactNode; mono?: boolean }) {
   return (
     <div className="flex items-start justify-between gap-3 py-1.5">
-      <span className="text-ink/55">{k}</span>
+      <span className="text-ink/75">{k}</span>
       <span className={`text-right ${mono ? "font-mono" : ""}`}>{v}</span>
     </div>
   );

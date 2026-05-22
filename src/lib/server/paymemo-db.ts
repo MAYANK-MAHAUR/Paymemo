@@ -9,6 +9,7 @@ type PayMemoDatabase = {
   batchPayoutRecords: EncryptedDomainRecord[];
   agentPaymentIntentRecords: EncryptedDomainRecord[];
   extensionPairings: ExtensionPairing[];
+  watchedWallets: WatchedWallet[];
   updatedAt: string;
 };
 
@@ -16,6 +17,15 @@ export type ExtensionPairing = {
   installToken: string;
   walletAddress: string;
   createdAt: string;
+};
+
+export type WatchedWallet = {
+  ownerWallet: string;
+  watchedAddress: string;
+  label: string;
+  enabled: boolean;
+  lastScannedBlock: number;
+  updatedAt: string;
 };
 
 type ExtensionPairingRow = {
@@ -32,6 +42,7 @@ const DEFAULT_DB: PayMemoDatabase = {
   batchPayoutRecords: [],
   agentPaymentIntentRecords: [],
   extensionPairings: [],
+  watchedWallets: [],
   updatedAt: new Date(0).toISOString(),
 };
 
@@ -183,6 +194,12 @@ async function ensureDbFile() {
 }
 
 export async function readPayMemoDb(): Promise<PayMemoDatabase> {
+  // On serverless platforms (Vercel) the filesystem is read-only outside
+  // of /tmp, so when Supabase is configured we serve a fresh in-memory
+  // default and let the real reads hit Supabase via the per-function helpers.
+  if (isSupabaseEnabled()) {
+    return { ...DEFAULT_DB, updatedAt: new Date().toISOString() };
+  }
   const fs = await import("node:fs/promises");
   const dbPath = await ensureDbFile();
   const raw = await fs.readFile(dbPath, "utf8");
@@ -197,6 +214,17 @@ export async function readPayMemoDb(): Promise<PayMemoDatabase> {
 export async function writePayMemoDb(
   updater: (db: PayMemoDatabase) => PayMemoDatabase | Promise<PayMemoDatabase>,
 ) {
+  // When Supabase is the source of truth (production / Vercel) we never
+  // touch the JSON file — it would throw EACCES on a read-only filesystem
+  // and bubble up as a confusing "Unable to clear database" error. Each
+  // mutation function already writes to Supabase before calling us; here
+  // we just return a fresh in-memory snapshot so callers stay happy.
+  if (isSupabaseEnabled()) {
+    const current = await readPayMemoDb();
+    const next = await updater(current);
+    return { ...next, updatedAt: new Date().toISOString() };
+  }
+
   const fs = await import("node:fs/promises");
 
   writeQueue = writeQueue.then(async () => {
@@ -295,68 +323,38 @@ export async function deleteVaultRecords(walletAddress: string) {
 
 export async function deleteUserDatabase(walletAddress: string) {
   const walletKey = walletAddress.toLowerCase();
+  const errors: string[] = [];
 
   if (isSupabaseEnabled()) {
+    const safeDelete = async (path: string) => {
+      try {
+        await supabaseRequest<undefined>(path, { method: "DELETE" });
+      } catch (error) {
+        errors.push(`${path}: ${error instanceof Error ? error.message : String(error)}`);
+      }
+    };
+
     await Promise.all([
-      supabaseRequest<undefined>(
-        `vault_records?wallet_address=eq.${encodeURIComponent(walletKey)}`,
-        { method: "DELETE" },
-      ),
-      supabaseRequest<undefined>(
-        `paymemo_domain_records?wallet_address=eq.${encodeURIComponent(walletKey)}`,
-        { method: "DELETE" },
-      ),
-      supabaseRequest<undefined>(
-        `payment_intents?wallet_address=eq.${encodeURIComponent(walletKey)}`,
-        { method: "DELETE" },
-      ),
-      supabaseRequest<undefined>(
-        `transactions?wallet_address=eq.${encodeURIComponent(walletKey)}`,
-        { method: "DELETE" },
-      ),
-      supabaseRequest<undefined>(
-        `extension_records?record->>from=eq.${encodeURIComponent(walletKey)}`,
-        { method: "DELETE" },
-      ),
-      supabaseRequest<undefined>(
-        `extension_records?record->>to=eq.${encodeURIComponent(walletKey)}`,
-        { method: "DELETE" },
-      ),
-      supabaseRequest<undefined>(
-        `agent_memory_records?record->>from=eq.${encodeURIComponent(walletKey)}`,
-        { method: "DELETE" },
-      ),
-      supabaseRequest<undefined>(
-        `agent_memory_records?record->>to=eq.${encodeURIComponent(walletKey)}`,
-        { method: "DELETE" },
-      ),
+      safeDelete(`vault_records?wallet_address=eq.${encodeURIComponent(walletKey)}`),
+      safeDelete(`paymemo_domain_records?wallet_address=eq.${encodeURIComponent(walletKey)}`),
+      safeDelete(`payment_intents?wallet_address=eq.${encodeURIComponent(walletKey)}`),
+      safeDelete(`transactions?wallet_address=eq.${encodeURIComponent(walletKey)}`),
+      safeDelete(`extension_records?record->>from=eq.${encodeURIComponent(walletKey)}`),
+      safeDelete(`extension_records?record->>to=eq.${encodeURIComponent(walletKey)}`),
+      safeDelete(`agent_memory_records?record->>from=eq.${encodeURIComponent(walletKey)}`),
+      safeDelete(`agent_memory_records?record->>to=eq.${encodeURIComponent(walletKey)}`),
+      safeDelete(`watched_wallets?owner_wallet=eq.${encodeURIComponent(walletKey)}`),
+      safeDelete(`watched_wallets?watched_address=eq.${encodeURIComponent(walletKey)}`),
+      safeDelete(`extension_pairings?wallet_address=eq.${encodeURIComponent(walletKey)}`),
     ]);
-    await writePayMemoDb((current) => ({
-      ...current,
-      vaultRecords: current.vaultRecords.filter(
-        (record) => record.walletAddress.toLowerCase() !== walletKey,
-      ),
-      extensionRecords: current.extensionRecords.filter(
-        (record) =>
-          String(record.from || "").toLowerCase() !== walletKey &&
-          String(record.to || "").toLowerCase() !== walletKey,
-      ),
-      agentMemoryRecords: current.agentMemoryRecords.filter(
-        (record) =>
-          String(record.from || "").toLowerCase() !== walletKey &&
-          String(record.to || "").toLowerCase() !== walletKey,
-      ),
-      invoiceRecords: current.invoiceRecords.filter(
-        (record) => record.walletAddress.toLowerCase() !== walletKey,
-      ),
-      batchPayoutRecords: current.batchPayoutRecords.filter(
-        (record) => record.walletAddress.toLowerCase() !== walletKey,
-      ),
-      agentPaymentIntentRecords: current.agentPaymentIntentRecords.filter(
-        (record) => record.walletAddress.toLowerCase() !== walletKey,
-      ),
-    }));
-    return { deleted: true };
+
+    // No JSON-file mirror on Vercel — Supabase is the only source of truth.
+    return {
+      deleted: errors.length === 0,
+      storage: "supabase" as const,
+      walletAddress: walletKey,
+      partialErrors: errors,
+    };
   }
 
   const db = await writePayMemoDb((current) => ({
@@ -388,7 +386,9 @@ export async function deleteUserDatabase(walletAddress: string) {
   return {
     deleted: true,
     remaining: {
-      vaultRecords: db.vaultRecords.filter((record) => record.walletAddress.toLowerCase() === walletKey).length,
+      vaultRecords: db.vaultRecords.filter(
+        (record) => record.walletAddress.toLowerCase() === walletKey,
+      ).length,
       domainRecords: [
         ...db.invoiceRecords,
         ...db.batchPayoutRecords,
@@ -579,11 +579,9 @@ export async function listAllEncryptedDomainRecords(walletAddress: string) {
   }
 
   const db = await readPayMemoDb();
-  return [
-    ...db.invoiceRecords,
-    ...db.batchPayoutRecords,
-    ...db.agentPaymentIntentRecords,
-  ].filter((record) => record.walletAddress.toLowerCase() === walletKey);
+  return [...db.invoiceRecords, ...db.batchPayoutRecords, ...db.agentPaymentIntentRecords].filter(
+    (record) => record.walletAddress.toLowerCase() === walletKey,
+  );
 }
 
 export async function getEncryptedDomainRecordById(
@@ -599,11 +597,7 @@ export async function getEncryptedDomainRecordById(
   }
 
   const db = await readPayMemoDb();
-  const records = [
-    ...db.invoiceRecords,
-    ...db.batchPayoutRecords,
-    ...db.agentPaymentIntentRecords,
-  ];
+  const records = [...db.invoiceRecords, ...db.batchPayoutRecords, ...db.agentPaymentIntentRecords];
   return records.find((record) => record.id === id && (!type || record.type === type)) ?? null;
 }
 
@@ -709,4 +703,149 @@ export async function listExtensionPairings(walletAddress: string) {
   }
   const db = await readPayMemoDb();
   return db.extensionPairings.filter((pair) => pair.walletAddress === walletKey);
+}
+
+// ---------------------------------------------------------------------------
+// Watched wallets — server-side chain-watch list. Owned by the user's connected
+// wallet (owner_wallet); contains addresses the cron / on-load scan should sweep.
+// ---------------------------------------------------------------------------
+
+type WatchedWalletRow = {
+  owner_wallet: string;
+  watched_address: string;
+  label: string | null;
+  enabled: boolean;
+  last_scanned_block: number | string;
+  created_at: string;
+  updated_at: string;
+};
+
+function toWatchedWallet(row: WatchedWalletRow): WatchedWallet {
+  return {
+    ownerWallet: row.owner_wallet,
+    watchedAddress: row.watched_address,
+    label: row.label ?? "",
+    enabled: Boolean(row.enabled),
+    lastScannedBlock: Number(row.last_scanned_block ?? 0),
+    updatedAt: row.updated_at,
+  };
+}
+
+export async function upsertWatchedWallet(input: {
+  ownerWallet: string;
+  watchedAddress: string;
+  label?: string;
+  enabled?: boolean;
+}) {
+  const ownerWallet = input.ownerWallet.toLowerCase();
+  const watchedAddress = input.watchedAddress.toLowerCase();
+  if (!/^0x[a-f0-9]{40}$/.test(ownerWallet) || !/^0x[a-f0-9]{40}$/.test(watchedAddress)) {
+    throw new Error("Invalid wallet address.");
+  }
+
+  const now = new Date().toISOString();
+  const record: WatchedWallet = {
+    ownerWallet,
+    watchedAddress,
+    label: (input.label ?? "").slice(0, 80),
+    enabled: input.enabled ?? true,
+    lastScannedBlock: 0,
+    updatedAt: now,
+  };
+
+  if (isSupabaseEnabled()) {
+    await supabaseRequest<WatchedWalletRow[]>(
+      "watched_wallets?on_conflict=owner_wallet,watched_address",
+      {
+        method: "POST",
+        body: JSON.stringify({
+          owner_wallet: record.ownerWallet,
+          watched_address: record.watchedAddress,
+          label: record.label || null,
+          enabled: record.enabled,
+          updated_at: record.updatedAt,
+        }),
+        prefer: "resolution=merge-duplicates,return=representation",
+      },
+    );
+    return record;
+  }
+
+  await writePayMemoDb((db) => {
+    const next = (db.watchedWallets ?? []).filter(
+      (item) => item.ownerWallet !== ownerWallet || item.watchedAddress !== watchedAddress,
+    );
+    return { ...db, watchedWallets: [record, ...next].slice(0, 5000) };
+  });
+  return record;
+}
+
+export async function listWatchedWalletsByOwner(ownerWallet: string) {
+  const key = ownerWallet.toLowerCase();
+  if (isSupabaseEnabled()) {
+    const rows = await supabaseRequest<WatchedWalletRow[]>(
+      `watched_wallets?owner_wallet=eq.${encodeURIComponent(key)}&select=*&order=updated_at.desc`,
+    ).catch(() => [] as WatchedWalletRow[]);
+    return rows.map(toWatchedWallet);
+  }
+  const db = await readPayMemoDb();
+  return (db.watchedWallets ?? []).filter((item) => item.ownerWallet === key);
+}
+
+export async function listEnabledWatchedWallets() {
+  if (isSupabaseEnabled()) {
+    const rows = await supabaseRequest<WatchedWalletRow[]>(
+      `watched_wallets?enabled=eq.true&select=*&order=updated_at.desc&limit=5000`,
+    ).catch(() => [] as WatchedWalletRow[]);
+    return rows.map(toWatchedWallet);
+  }
+  const db = await readPayMemoDb();
+  return (db.watchedWallets ?? []).filter((item) => item.enabled);
+}
+
+export async function deleteWatchedWallet(ownerWallet: string, watchedAddress: string) {
+  const owner = ownerWallet.toLowerCase();
+  const watched = watchedAddress.toLowerCase();
+  if (isSupabaseEnabled()) {
+    await supabaseRequest<unknown>(
+      `watched_wallets?owner_wallet=eq.${encodeURIComponent(owner)}&watched_address=eq.${encodeURIComponent(watched)}`,
+      { method: "DELETE" },
+    );
+    return { ok: true };
+  }
+  await writePayMemoDb((db) => ({
+    ...db,
+    watchedWallets: (db.watchedWallets ?? []).filter(
+      (item) => item.ownerWallet !== owner || item.watchedAddress !== watched,
+    ),
+  }));
+  return { ok: true };
+}
+
+export async function updateWatchedWalletScanProgress(
+  watchedAddress: string,
+  lastScannedBlock: number,
+) {
+  const watched = watchedAddress.toLowerCase();
+  const updatedAt = new Date().toISOString();
+  if (isSupabaseEnabled()) {
+    await supabaseRequest<unknown>(
+      `watched_wallets?watched_address=eq.${encodeURIComponent(watched)}`,
+      {
+        method: "PATCH",
+        body: JSON.stringify({
+          last_scanned_block: lastScannedBlock,
+          updated_at: updatedAt,
+        }),
+        prefer: "return=minimal",
+      },
+    );
+    return;
+  }
+  await writePayMemoDb((db) => ({
+    ...db,
+    watchedWallets: (db.watchedWallets ?? []).map((item) =>
+      item.watchedAddress === watched ? { ...item, lastScannedBlock, updatedAt } : item,
+    ),
+  }));
 }

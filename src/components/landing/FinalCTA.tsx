@@ -17,7 +17,7 @@ export function FinalCTA() {
             <h2 className="text-4xl sm:text-6xl font-semibold tracking-[-0.025em] leading-[1.02]">
               Turn wallet activity into <span className="font-serif-italic">financial memory.</span>
             </h2>
-            <p className="mt-6 text-ink/80 max-w-xl text-lg">
+            <p className="mt-6 text-ink/88 max-w-xl text-lg">
               Wallets show what happened. PayMemo records why after a transaction is detected. Start
               with a Morph Hoodi test payment, install the browser extension, or watch a wallet
               right from the dashboard.

@@ -115,7 +115,7 @@ function DocsPage() {
 
             <DocPanel icon={<WalletCards />} title="Wallet-Assist Extension">
               <StepList steps={extensionSteps} />
-              <div className="mt-5 rounded-2xl border border-papaya/40 bg-papaya/15 p-4 text-sm leading-6 text-ink/70">
+              <div className="mt-5 rounded-2xl border border-papaya/40 bg-papaya/15 p-4 text-sm leading-6 text-ink/82">
                 When a user sends from Bitget wallet itself, PayMemo cannot stop the wallet confirm
                 screen. The Morph watcher detects the tx right after broadcast, auto-syncs it to
                 Review, and opens the prompt in the active web page or side panel.
@@ -132,7 +132,7 @@ function DocsPage() {
               <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-pink">
                 <KeyRound className="h-4 w-4" /> Vault model
               </div>
-              <div className="mt-4 space-y-3 text-sm leading-6 text-ink/65">
+              <div className="mt-4 space-y-3 text-sm leading-6 text-ink/80">
                 <p>
                   No email login. The wallet is identity. The unlock signature derives the browser
                   encryption key, and private fields are encrypted before database sync.
@@ -157,7 +157,7 @@ function DocsPage() {
                       </span>
                       <span className="break-all font-mono">{endpoint.path}</span>
                     </div>
-                    <p className="mt-2 text-xs leading-5 text-ink/60">{endpoint.text}</p>
+                    <p className="mt-2 text-xs leading-5 text-ink/78">{endpoint.text}</p>
                   </div>
                 ))}
               </div>
@@ -222,7 +222,7 @@ function HeroCard({ icon, title, body }: { icon: React.ReactNode; title: string;
     <article className="rounded-3xl border border-ink/35 bg-white p-6 shadow-soft">
       <div className="grid h-11 w-11 place-items-center rounded-2xl bg-ink text-cream">{icon}</div>
       <h2 className="mt-5 text-xl font-semibold">{title}</h2>
-      <p className="mt-2 text-sm leading-6 text-ink/60">{body}</p>
+      <p className="mt-2 text-sm leading-6 text-ink/78">{body}</p>
     </article>
   );
 }
@@ -253,7 +253,7 @@ function StepList({ steps }: { steps: string[] }) {
   return (
     <ol className="space-y-3">
       {steps.map((step, index) => (
-        <li key={step} className="flex gap-3 text-sm leading-6 text-ink/68">
+        <li key={step} className="flex gap-3 text-sm leading-6 text-ink/80">
           <span className="mt-0.5 grid h-6 w-6 shrink-0 place-items-center rounded-full border border-ink/25 bg-cream text-[11px] font-bold text-ink">
             {index + 1}
           </span>
@@ -281,7 +281,7 @@ function MiniDoc({
         </span>
         {title}
       </div>
-      <p className="mt-3 text-sm leading-6 text-ink/60">{text}</p>
+      <p className="mt-3 text-sm leading-6 text-ink/78">{text}</p>
     </article>
   );
 }

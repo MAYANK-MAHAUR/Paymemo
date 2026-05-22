@@ -38,7 +38,7 @@ function InstallPage() {
         <div className="mx-auto max-w-5xl">
           <Link
             to="/"
-            className="inline-flex items-center gap-1.5 text-xs uppercase tracking-[0.18em] text-ink/55 hover:text-ink"
+            className="inline-flex items-center gap-1.5 text-xs uppercase tracking-[0.18em] text-ink/75 hover:text-ink"
           >
             <ArrowLeft className="h-3.5 w-3.5" /> Back to home
           </Link>
@@ -46,7 +46,7 @@ function InstallPage() {
           <div className="mt-6 flex flex-wrap items-center gap-5">
             <Logo size={64} className="rounded-2xl" />
             <div>
-              <p className="text-[10px] uppercase tracking-[0.28em] text-ink/55">
+              <p className="text-[10px] uppercase tracking-[0.28em] text-ink/75">
                 PayMemo Wallet Assist · Chrome / Brave / Edge / Arc
               </p>
               <h1 className="mt-1 text-4xl sm:text-5xl font-semibold tracking-tight">
@@ -55,7 +55,7 @@ function InstallPage() {
             </div>
           </div>
 
-          <p className="mt-6 max-w-3xl text-base sm:text-lg text-ink/70 leading-relaxed">
+          <p className="mt-6 max-w-3xl text-base sm:text-lg text-ink/82 leading-relaxed">
             The PayMemo browser extension watches your wallets on Morph and pops up a private memo
             prompt the moment a transaction is detected. The extension is not yet on the Chrome Web
             Store — for the demo you can side-load it in less than 30 seconds.
@@ -82,13 +82,13 @@ function InstallPage() {
             </a>
             <Link
               to="/app"
-              className="inline-flex items-center gap-2 rounded-full border border-ink/15 bg-cream/40 px-6 py-3.5 text-sm font-semibold uppercase tracking-[0.18em] text-ink/85 hover:bg-cream transition"
+              className="inline-flex items-center gap-2 rounded-full border border-ink/15 bg-cream/40 px-6 py-3.5 text-sm font-semibold uppercase tracking-[0.18em] text-ink/90 hover:bg-cream transition"
             >
               <Wallet className="h-4 w-4" /> Or use the dashboard instead
             </Link>
           </div>
 
-          <p className="mt-3 text-xs text-ink/55 max-w-2xl">
+          <p className="mt-3 text-xs text-ink/75 max-w-2xl">
             Don't want to install anything? The dashboard mirrors every extension feature — add a
             watched wallet, label partners, and review detected transactions in your browser without
             any sideload.
@@ -194,7 +194,7 @@ function InstallPage() {
               <h2 className="mt-2 text-2xl sm:text-3xl font-semibold tracking-tight">
                 Chrome Web Store listing is on the way.
               </h2>
-              <p className="mt-3 text-cream/75 leading-relaxed">
+              <p className="mt-3 text-cream/88 leading-relaxed">
                 PayMemo is an open hackathon build. The Web Store $5 developer fee isn't a barrier —
                 listing review and our v1 polish are. Until then, sideloading is the official
                 install path, and the extension code is yours to inspect.
@@ -210,7 +210,7 @@ function InstallPage() {
               </a>
               <Link
                 to="/app/docs"
-                className="inline-flex items-center justify-center gap-2 rounded-full border border-cream/30 px-5 py-3 text-sm font-semibold uppercase tracking-[0.18em] text-cream/85 hover:border-cream/70 transition"
+                className="inline-flex items-center justify-center gap-2 rounded-full border border-cream/30 px-5 py-3 text-sm font-semibold uppercase tracking-[0.18em] text-cream/92 hover:border-cream/70 transition"
               >
                 <HelpCircle className="h-4 w-4" /> Troubleshooting
               </Link>
@@ -239,10 +239,10 @@ function Step({
     <article className="relative rounded-2xl border border-ink/15 bg-white p-6 shadow-soft">
       <div className="flex items-center gap-3">
         <div className="grid h-9 w-9 place-items-center rounded-xl bg-ink text-cream">{icon}</div>
-        <div className="text-[10px] uppercase tracking-[0.24em] text-ink/55">Step {n}</div>
+        <div className="text-[10px] uppercase tracking-[0.24em] text-ink/75">Step {n}</div>
       </div>
       <h3 className="mt-4 text-lg font-semibold tracking-tight">{title}</h3>
-      <p className="mt-2 text-sm text-ink/70 leading-relaxed">{body}</p>
+      <p className="mt-2 text-sm text-ink/82 leading-relaxed">{body}</p>
     </article>
   );
 }

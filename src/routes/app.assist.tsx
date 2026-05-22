@@ -35,7 +35,7 @@ function WalletAssist() {
             <div className="flex items-center gap-2 text-sm font-semibold">
               <Download className="h-4 w-4 text-mint" /> Install extension
             </div>
-            <p className="mt-2 text-sm leading-6 text-ink/70">
+            <p className="mt-2 text-sm leading-6 text-ink/82">
               Get the PayMemo browser extension for the full experience — popup memo prompts, side
               panel review, and pre-signature capture on any dApp.
             </p>
@@ -47,7 +47,7 @@ function WalletAssist() {
             <div className="flex items-center gap-2 text-sm font-semibold">
               <RadioTower className="h-4 w-4 text-mint" /> Or watch from this tab
             </div>
-            <p className="mt-2 text-sm leading-6 text-ink/60">
+            <p className="mt-2 text-sm leading-6 text-ink/78">
               No extension? Toggle{" "}
               <Link to="/app" className="underline underline-offset-2 hover:text-ink">
                 Browser chain watch
@@ -59,7 +59,7 @@ function WalletAssist() {
             <div className="flex items-center gap-2 text-sm font-semibold">
               <PanelRightOpen className="h-4 w-4" /> Add the memo
             </div>
-            <p className="mt-2 text-sm leading-6 text-ink/60">
+            <p className="mt-2 text-sm leading-6 text-ink/78">
               When a tx is detected, the extension popup or the dashboard{" "}
               <Link to="/app/review" className="underline underline-offset-2 hover:text-ink">
                 Review tab
@@ -73,7 +73,7 @@ function WalletAssist() {
           <div className="flex flex-wrap items-center justify-between gap-3 border-b border-ink/35 px-6 py-4">
             <div>
               <div className="text-sm font-semibold">Needs info</div>
-              <div className="text-xs text-ink/50">
+              <div className="text-xs text-ink/72">
                 Detected transactions waiting for user context
               </div>
             </div>
@@ -87,7 +87,7 @@ function WalletAssist() {
           <div className="overflow-x-auto">
             <table className="w-full min-w-[860px] text-sm">
               <thead>
-                <tr className="bg-cream/60 text-[10px] uppercase tracking-widest text-ink/50">
+                <tr className="bg-cream/60 text-[10px] uppercase tracking-widest text-ink/72">
                   {[
                     "Source",
                     "Action",
@@ -111,9 +111,9 @@ function WalletAssist() {
                     </td>
                     <td className="px-5 py-3.5">
                       <div>{formatAction(intent)}</div>
-                      <div className="text-xs text-ink/50">{formatCounterparty(intent)}</div>
+                      <div className="text-xs text-ink/72">{formatCounterparty(intent)}</div>
                     </td>
-                    <td className="px-5 py-3.5 text-ink/60">Morph Hoodi</td>
+                    <td className="px-5 py-3.5 text-ink/78">Morph Hoodi</td>
                     <td className="px-5 py-3.5 font-mono">
                       {intent.amount} {intent.token}
                     </td>
@@ -122,7 +122,7 @@ function WalletAssist() {
                         {intent.category}
                       </span>
                     </td>
-                    <td className="px-5 py-3.5 text-xs text-ink/60">
+                    <td className="px-5 py-3.5 text-xs text-ink/78">
                       {intent.provider === "Morph Chain Watch"
                         ? "Needs user memo"
                         : "Extension capture"}
@@ -134,7 +134,7 @@ function WalletAssist() {
                 ))}
                 {pendingRecords.length === 0 && (
                   <tr>
-                    <td colSpan={7} className="px-5 py-12 text-center text-sm text-ink/50">
+                    <td colSpan={7} className="px-5 py-12 text-center text-sm text-ink/72">
                       No pending assisted intents. Capture a wallet transaction with the extension.
                     </td>
                   </tr>
@@ -148,7 +148,7 @@ function WalletAssist() {
           <div className="flex flex-wrap items-center justify-between gap-3 border-b border-ink/35 px-6 py-4">
             <div>
               <div className="text-sm font-semibold">Synced extension captures</div>
-              <div className="text-xs text-ink/50">
+              <div className="text-xs text-ink/72">
                 Records pushed from the browser extension into this dApp session
               </div>
             </div>
@@ -159,7 +159,7 @@ function WalletAssist() {
           <div className="overflow-x-auto">
             <table className="w-full min-w-[860px] text-sm">
               <thead>
-                <tr className="bg-cream/60 text-[10px] uppercase tracking-widest text-ink/50">
+                <tr className="bg-cream/60 text-[10px] uppercase tracking-widest text-ink/72">
                   {[
                     "Origin",
                     "Wallet",
@@ -179,14 +179,14 @@ function WalletAssist() {
               <tbody>
                 {syncedRecords.map((record) => (
                   <tr key={record.id} className="border-t border-ink/30 hover:bg-cream/40">
-                    <td className="max-w-[180px] truncate px-5 py-3.5 text-ink/60">
+                    <td className="max-w-[180px] truncate px-5 py-3.5 text-ink/78">
                       {record.source ?? "browser-extension"}
                     </td>
-                    <td className="max-w-[180px] truncate px-5 py-3.5 text-ink/60">
+                    <td className="max-w-[180px] truncate px-5 py-3.5 text-ink/78">
                       {record.provider ?? "injected EVM"}
                     </td>
                     <td className="px-5 py-3.5 font-mono">
-                      {record.amount} <span className="text-ink/50">{record.token}</span>
+                      {record.amount} <span className="text-ink/72">{record.token}</span>
                     </td>
                     <td className="px-5 py-3.5">
                       <span className="rounded-full border border-ink/35 bg-cream px-2 py-0.5 text-[10px] font-medium">
@@ -196,7 +196,7 @@ function WalletAssist() {
                     <td className="px-5 py-3.5">
                       {record.counterparty ?? formatCounterparty(record)}
                     </td>
-                    <td className="max-w-[260px] truncate px-5 py-3.5 text-ink/70">
+                    <td className="max-w-[260px] truncate px-5 py-3.5 text-ink/82">
                       {record.note ?? "No private note synced."}
                     </td>
                     <td className="px-5 py-3.5 font-mono text-xs">{record.txHash ?? "pending"}</td>
@@ -207,7 +207,7 @@ function WalletAssist() {
                 ))}
                 {syncedRecords.length === 0 && (
                   <tr>
-                    <td colSpan={8} className="px-5 py-12 text-center text-sm text-ink/50">
+                    <td colSpan={8} className="px-5 py-12 text-center text-sm text-ink/72">
                       Use the extension popup's Sync button after capturing a transaction.
                     </td>
                   </tr>

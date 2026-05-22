@@ -56,6 +56,44 @@ export async function signVaultUnlock(walletAddress: string) {
   })) as string;
 }
 
+/**
+ * Ask the user to sign an explicit "authorize watching" message before we
+ * register a wallet in their PayMemo watch list. This is a friction-on-purpose
+ * step — it makes accidental adds impossible (the user has to see a wallet
+ * popup and confirm) and lets us record a verifiable consent for the
+ * partner wallet address.
+ */
+export async function signWatchAuthorization(input: {
+  ownerWallet: string;
+  watchedAddress: string;
+  label: string;
+  intent?: "my-wallet" | "partner-wallet";
+}) {
+  const ethereum = await getSelectedEthereumProvider();
+  if (!ethereum) throw new Error("No browser wallet found.");
+
+  const intent = input.intent ?? "partner-wallet";
+  const now = new Date().toISOString();
+  const message = [
+    "PayMemo · Authorize wallet watch",
+    "",
+    `Intent: ${intent}`,
+    `Watcher: ${input.ownerWallet}`,
+    `Watched: ${input.watchedAddress}`,
+    `Label: ${input.label || "(unlabeled)"}`,
+    `Issued: ${now}`,
+    "",
+    "Signing this message authorizes PayMemo to add the wallet above to your encrypted watch list. No funds move. No transactions are signed.",
+  ].join("\n");
+
+  const signature = (await ethereum.request({
+    method: "personal_sign",
+    params: [message, input.ownerWallet],
+  })) as string;
+
+  return { message, signature, signedAt: now };
+}
+
 export async function deriveVaultKey(signature: string, walletAddress: string) {
   const crypto = requireBrowserCrypto();
   const encoder = new TextEncoder();

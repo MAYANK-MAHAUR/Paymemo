@@ -86,7 +86,7 @@ export function WalletConnectModal({
           </div>
           <button
             onClick={onClose}
-            className="grid h-9 w-9 place-items-center rounded-full border border-ink/20 text-ink/60 hover:text-ink"
+            className="grid h-9 w-9 place-items-center rounded-full border border-ink/20 text-ink/78 hover:text-ink"
             type="button"
           >
             <X className="h-4 w-4" />
@@ -108,7 +108,7 @@ export function WalletConnectModal({
                 </span>
                 <span className="min-w-0 flex-1">
                   <span className="block font-semibold">{wallet.name}</span>
-                  <span className="block truncate text-xs text-ink/50">
+                  <span className="block truncate text-xs text-ink/72">
                     {connectingId === wallet.id ? "Waiting for wallet approval" : wallet.rdns || "Detected browser wallet"}
                   </span>
                 </span>

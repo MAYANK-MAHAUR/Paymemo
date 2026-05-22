@@ -85,20 +85,22 @@ export function BrowserChainWatchCard({
         <div>
           <div className="flex items-center gap-2 text-sm font-semibold">
             <RadioTower
-              className={`h-4 w-4 ${status.tone === "live" ? "text-mint" : "text-ink/55"}`}
+              className={`h-4 w-4 ${status.tone === "live" ? "text-mint" : "text-ink/75"}`}
             />
             Browser chain watch
-            <span className="ml-1 rounded-full border border-ink/15 bg-cream/50 px-1.5 py-0.5 text-[9px] uppercase tracking-[0.18em] text-ink/55">
-              No extension needed
+            <span className="ml-1 rounded-full border border-ink/15 bg-cream/50 px-1.5 py-0.5 text-[9px] uppercase tracking-[0.18em] text-ink/75">
+              Live in-tab + server catch-up
             </span>
           </div>
-          <p className="mt-1 max-w-2xl text-xs text-ink/55 leading-relaxed">
-            Same detection as the PayMemo extension, running in this tab. Add your wallet (and
-            partner wallets), keep the dashboard open, and Morph Hoodi transactions land in{" "}
+          <p className="mt-1 max-w-2xl text-xs text-ink/75 leading-relaxed">
+            Wallets you add above are also scanned by the PayMemo server every few hours — and once
+            whenever you re-open the dashboard — so transactions detected while this tab was closed
+            land in{" "}
             <Link to="/app/review" className="underline underline-offset-2 hover:text-ink">
               Needs Review
             </Link>{" "}
-            with a private memo prompt.
+            as soon as you come back. Toggle this on to also run a live in-tab poll for faster
+            updates while you're here.
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -115,7 +117,7 @@ export function BrowserChainWatchCard({
                 <Wifi className="h-3.5 w-3.5 text-mint" /> Live
               </span>
             ) : (
-              <span className="inline-flex items-center gap-1.5 text-ink/70">
+              <span className="inline-flex items-center gap-1.5 text-ink/82">
                 <WifiOff className="h-3.5 w-3.5" /> Paused
               </span>
             )}
@@ -137,7 +139,7 @@ export function BrowserChainWatchCard({
             ? "border-mint/40 bg-mint/10 text-ink"
             : status.tone === "paused"
               ? "border-papaya/40 bg-papaya/10 text-ink"
-              : "border-ink/15 bg-cream/50 text-ink/70"
+              : "border-ink/15 bg-cream/50 text-ink/82"
         }`}
       >
         {scanFlash || status.copy}
@@ -168,7 +170,7 @@ export function BrowserChainWatchCard({
             >
               <span className="h-1.5 w-1.5 rounded-full bg-mint" />
               <strong>{labels[address] || "Watched"}</strong>
-              <span className="font-mono text-ink/55">
+              <span className="font-mono text-ink/75">
                 {address.slice(0, 6)}…{address.slice(-4)}
               </span>
             </span>
@@ -177,7 +179,7 @@ export function BrowserChainWatchCard({
       )}
 
       <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
-        <span className="text-[10px] uppercase tracking-[0.18em] text-ink/45">
+        <span className="text-[10px] uppercase tracking-[0.18em] text-ink/68">
           Morph Hoodi · {state.isScanning ? "polling" : "idle"}
         </span>
         <Link
@@ -194,7 +196,7 @@ export function BrowserChainWatchCard({
 function Stat({ label, value, icon }: { label: string; value: string; icon?: React.ReactNode }) {
   return (
     <div className="rounded-xl border border-ink/15 bg-cream/40 px-3 py-2">
-      <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-[0.18em] text-ink/55">
+      <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-[0.18em] text-ink/75">
         {icon}
         {label}
       </div>

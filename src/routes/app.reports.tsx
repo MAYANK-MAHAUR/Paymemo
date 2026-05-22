@@ -176,7 +176,7 @@ function Reports() {
 
           <div className="rounded-3xl border border-ink/35 bg-white p-6 shadow-soft">
             <div className="text-sm font-semibold">Category breakdown</div>
-            <div className="text-xs text-ink/50">From decrypted records</div>
+            <div className="text-xs text-ink/72">From decrypted records</div>
             <ul className="mt-5 space-y-3">
               {breakdown.map((item) => {
                 const total = breakdown.reduce((sum, next) => sum + next.value, 0) || 1;
@@ -196,7 +196,7 @@ function Reports() {
                   </li>
                 );
               })}
-              {breakdown.length === 0 && <li className="text-sm text-ink/50">No report rows yet.</li>}
+              {breakdown.length === 0 && <li className="text-sm text-ink/72">No report rows yet.</li>}
             </ul>
           </div>
         </div>

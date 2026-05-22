@@ -156,7 +156,7 @@ function Invoices() {
           <div className="flex items-center justify-between border-b border-ink/35 px-6 py-4">
             <div>
               <div className="text-sm font-semibold">All invoices</div>
-              <div className="text-xs text-ink/50">{rows.length} encrypted records</div>
+              <div className="text-xs text-ink/72">{rows.length} encrypted records</div>
             </div>
             <button
               onClick={() => void loadInvoices()}
@@ -167,7 +167,7 @@ function Invoices() {
           </div>
           <table className="w-full text-sm">
             <thead>
-              <tr className="bg-cream/60 text-[10px] uppercase tracking-widest text-ink/50">
+              <tr className="bg-cream/60 text-[10px] uppercase tracking-widest text-ink/72">
                 {["Number", "Client", "Amount", "Due", "Linked tx", "Status", ""].map((h) => (
                   <th key={h} className="px-5 py-3 text-left font-medium">
                     {h}
@@ -182,10 +182,10 @@ function Invoices() {
                   <td className="px-5 py-3.5">{invoice.client}</td>
                   <td className="px-5 py-3.5 font-mono">
                     {Number(invoice.amount).toLocaleString(undefined, { maximumFractionDigits: 18 })}{" "}
-                    <span className="text-ink/50">{invoice.token}</span>
+                    <span className="text-ink/72">{invoice.token}</span>
                   </td>
-                  <td className="px-5 py-3.5 text-ink/60">{invoice.due}</td>
-                  <td className="px-5 py-3.5 font-mono text-xs text-ink/60">
+                  <td className="px-5 py-3.5 text-ink/78">{invoice.due}</td>
+                  <td className="px-5 py-3.5 font-mono text-xs text-ink/78">
                     {invoice.linkedTxHash ? shortHash(invoice.linkedTxHash) : "none"}
                   </td>
                   <td className="px-5 py-3.5">
@@ -195,14 +195,14 @@ function Invoices() {
                     <div className="inline-flex items-center gap-2">
                       <button
                         onClick={() => void navigator.clipboard?.writeText(invoice.paymentLink)}
-                        className="text-ink/60 hover:text-pink"
+                        className="text-ink/78 hover:text-pink"
                         title="Copy payment link"
                       >
                         <Link2 className="h-4 w-4" />
                       </button>
                       <a
                         href={invoice.paymentLink}
-                        className="text-ink/60 hover:text-pink"
+                        className="text-ink/78 hover:text-pink"
                         title="Open payment link"
                       >
                         <ExternalLink className="h-4 w-4" />
@@ -213,7 +213,7 @@ function Invoices() {
               ))}
               {rows.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="px-5 py-12 text-center text-sm text-ink/50">
+                  <td colSpan={7} className="px-5 py-12 text-center text-sm text-ink/72">
                     No encrypted invoices yet.
                   </td>
                 </tr>
@@ -237,7 +237,7 @@ function Invoices() {
               />
               <Input label="Amount" value={form.amount} onChange={(amount) => setForm({ ...form, amount })} mono />
               <label className="block rounded-xl border border-ink/35 bg-cream/60 px-3 py-2">
-                <div className="text-[10px] uppercase tracking-widest text-ink/55">Token</div>
+                <div className="text-[10px] uppercase tracking-widest text-ink/75">Token</div>
                 <select
                   value={form.token}
                   onChange={(event) => setForm({ ...form, token: event.target.value })}
@@ -270,7 +270,7 @@ function Invoices() {
             <p className="mt-3 text-xs font-semibold text-red-900">{message}</p>
             <div className="mt-3 flex items-center gap-2 rounded-xl border border-ink/35 bg-white p-3 font-mono text-xs">
               <span className="flex-1 truncate">{walletAddress || "No wallet unlocked"}</span>
-              <Copy className="h-3.5 w-3.5 text-ink/50" />
+              <Copy className="h-3.5 w-3.5 text-ink/72" />
             </div>
           </div>
         </div>
@@ -321,7 +321,7 @@ function Input({
 }) {
   return (
     <label className="block rounded-xl border border-ink/35 bg-cream/60 px-3 py-2">
-      <div className="text-[10px] uppercase tracking-widest text-ink/55">{label}</div>
+      <div className="text-[10px] uppercase tracking-widest text-ink/75">{label}</div>
       <input
         value={value}
         onChange={(event) => onChange(event.target.value)}

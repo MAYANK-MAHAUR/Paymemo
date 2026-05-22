@@ -25,17 +25,20 @@ import { Route as AppDocsRouteImport } from './routes/app.docs'
 import { Route as AppBatchRouteImport } from './routes/app.batch'
 import { Route as AppAssistRouteImport } from './routes/app.assist'
 import { Route as AppAgentsRouteImport } from './routes/app.agents'
+import { Route as ApiWatchedWalletsRouteImport } from './routes/api.watched-wallets'
 import { Route as ApiVaultRecordsRouteImport } from './routes/api.vault-records'
 import { Route as ApiRecordsRouteImport } from './routes/api.records'
 import { Route as ApiPublicInvoiceRouteImport } from './routes/api.public-invoice'
 import { Route as ApiInvoicesRouteImport } from './routes/api.invoices'
 import { Route as ApiInvoicePaymentRouteImport } from './routes/api.invoice-payment'
+import { Route as ApiHealthRouteImport } from './routes/api.health'
 import { Route as ApiExtensionPairRouteImport } from './routes/api.extension-pair'
 import { Route as ApiExtensionIntentRouteImport } from './routes/api.extension-intent'
 import { Route as ApiDatabaseResetRouteImport } from './routes/api.database-reset'
 import { Route as ApiBatchPayoutsRouteImport } from './routes/api.batch-payouts'
 import { Route as ApiAgentPaymentIntentRouteImport } from './routes/api.agent-payment-intent'
 import { Route as ApiAgentMemoryRouteImport } from './routes/api.agent-memory'
+import { Route as ApiCronScanMorphRouteImport } from './routes/api.cron.scan-morph'
 
 const InstallRoute = InstallRouteImport.update({
   id: '/install',
@@ -117,6 +120,11 @@ const AppAgentsRoute = AppAgentsRouteImport.update({
   path: '/agents',
   getParentRoute: () => AppRoute,
 } as any)
+const ApiWatchedWalletsRoute = ApiWatchedWalletsRouteImport.update({
+  id: '/api/watched-wallets',
+  path: '/api/watched-wallets',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiVaultRecordsRoute = ApiVaultRecordsRouteImport.update({
   id: '/api/vault-records',
   path: '/api/vault-records',
@@ -140,6 +148,11 @@ const ApiInvoicesRoute = ApiInvoicesRouteImport.update({
 const ApiInvoicePaymentRoute = ApiInvoicePaymentRouteImport.update({
   id: '/api/invoice-payment',
   path: '/api/invoice-payment',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiHealthRoute = ApiHealthRouteImport.update({
+  id: '/api/health',
+  path: '/api/health',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiExtensionPairRoute = ApiExtensionPairRouteImport.update({
@@ -172,6 +185,11 @@ const ApiAgentMemoryRoute = ApiAgentMemoryRouteImport.update({
   path: '/api/agent-memory',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiCronScanMorphRoute = ApiCronScanMorphRouteImport.update({
+  id: '/api/cron/scan-morph',
+  path: '/api/cron/scan-morph',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -183,11 +201,13 @@ export interface FileRoutesByFullPath {
   '/api/database-reset': typeof ApiDatabaseResetRoute
   '/api/extension-intent': typeof ApiExtensionIntentRoute
   '/api/extension-pair': typeof ApiExtensionPairRoute
+  '/api/health': typeof ApiHealthRoute
   '/api/invoice-payment': typeof ApiInvoicePaymentRoute
   '/api/invoices': typeof ApiInvoicesRoute
   '/api/public-invoice': typeof ApiPublicInvoiceRoute
   '/api/records': typeof ApiRecordsRoute
   '/api/vault-records': typeof ApiVaultRecordsRoute
+  '/api/watched-wallets': typeof ApiWatchedWalletsRoute
   '/app/agents': typeof AppAgentsRoute
   '/app/assist': typeof AppAssistRoute
   '/app/batch': typeof AppBatchRoute
@@ -201,6 +221,7 @@ export interface FileRoutesByFullPath {
   '/app/settings': typeof AppSettingsRoute
   '/pay/$invoiceId': typeof PayInvoiceIdRoute
   '/app/': typeof AppIndexRoute
+  '/api/cron/scan-morph': typeof ApiCronScanMorphRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -211,11 +232,13 @@ export interface FileRoutesByTo {
   '/api/database-reset': typeof ApiDatabaseResetRoute
   '/api/extension-intent': typeof ApiExtensionIntentRoute
   '/api/extension-pair': typeof ApiExtensionPairRoute
+  '/api/health': typeof ApiHealthRoute
   '/api/invoice-payment': typeof ApiInvoicePaymentRoute
   '/api/invoices': typeof ApiInvoicesRoute
   '/api/public-invoice': typeof ApiPublicInvoiceRoute
   '/api/records': typeof ApiRecordsRoute
   '/api/vault-records': typeof ApiVaultRecordsRoute
+  '/api/watched-wallets': typeof ApiWatchedWalletsRoute
   '/app/agents': typeof AppAgentsRoute
   '/app/assist': typeof AppAssistRoute
   '/app/batch': typeof AppBatchRoute
@@ -229,6 +252,7 @@ export interface FileRoutesByTo {
   '/app/settings': typeof AppSettingsRoute
   '/pay/$invoiceId': typeof PayInvoiceIdRoute
   '/app': typeof AppIndexRoute
+  '/api/cron/scan-morph': typeof ApiCronScanMorphRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -241,11 +265,13 @@ export interface FileRoutesById {
   '/api/database-reset': typeof ApiDatabaseResetRoute
   '/api/extension-intent': typeof ApiExtensionIntentRoute
   '/api/extension-pair': typeof ApiExtensionPairRoute
+  '/api/health': typeof ApiHealthRoute
   '/api/invoice-payment': typeof ApiInvoicePaymentRoute
   '/api/invoices': typeof ApiInvoicesRoute
   '/api/public-invoice': typeof ApiPublicInvoiceRoute
   '/api/records': typeof ApiRecordsRoute
   '/api/vault-records': typeof ApiVaultRecordsRoute
+  '/api/watched-wallets': typeof ApiWatchedWalletsRoute
   '/app/agents': typeof AppAgentsRoute
   '/app/assist': typeof AppAssistRoute
   '/app/batch': typeof AppBatchRoute
@@ -259,6 +285,7 @@ export interface FileRoutesById {
   '/app/settings': typeof AppSettingsRoute
   '/pay/$invoiceId': typeof PayInvoiceIdRoute
   '/app/': typeof AppIndexRoute
+  '/api/cron/scan-morph': typeof ApiCronScanMorphRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -272,11 +299,13 @@ export interface FileRouteTypes {
     | '/api/database-reset'
     | '/api/extension-intent'
     | '/api/extension-pair'
+    | '/api/health'
     | '/api/invoice-payment'
     | '/api/invoices'
     | '/api/public-invoice'
     | '/api/records'
     | '/api/vault-records'
+    | '/api/watched-wallets'
     | '/app/agents'
     | '/app/assist'
     | '/app/batch'
@@ -290,6 +319,7 @@ export interface FileRouteTypes {
     | '/app/settings'
     | '/pay/$invoiceId'
     | '/app/'
+    | '/api/cron/scan-morph'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -300,11 +330,13 @@ export interface FileRouteTypes {
     | '/api/database-reset'
     | '/api/extension-intent'
     | '/api/extension-pair'
+    | '/api/health'
     | '/api/invoice-payment'
     | '/api/invoices'
     | '/api/public-invoice'
     | '/api/records'
     | '/api/vault-records'
+    | '/api/watched-wallets'
     | '/app/agents'
     | '/app/assist'
     | '/app/batch'
@@ -318,6 +350,7 @@ export interface FileRouteTypes {
     | '/app/settings'
     | '/pay/$invoiceId'
     | '/app'
+    | '/api/cron/scan-morph'
   id:
     | '__root__'
     | '/'
@@ -329,11 +362,13 @@ export interface FileRouteTypes {
     | '/api/database-reset'
     | '/api/extension-intent'
     | '/api/extension-pair'
+    | '/api/health'
     | '/api/invoice-payment'
     | '/api/invoices'
     | '/api/public-invoice'
     | '/api/records'
     | '/api/vault-records'
+    | '/api/watched-wallets'
     | '/app/agents'
     | '/app/assist'
     | '/app/batch'
@@ -347,6 +382,7 @@ export interface FileRouteTypes {
     | '/app/settings'
     | '/pay/$invoiceId'
     | '/app/'
+    | '/api/cron/scan-morph'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -359,12 +395,15 @@ export interface RootRouteChildren {
   ApiDatabaseResetRoute: typeof ApiDatabaseResetRoute
   ApiExtensionIntentRoute: typeof ApiExtensionIntentRoute
   ApiExtensionPairRoute: typeof ApiExtensionPairRoute
+  ApiHealthRoute: typeof ApiHealthRoute
   ApiInvoicePaymentRoute: typeof ApiInvoicePaymentRoute
   ApiInvoicesRoute: typeof ApiInvoicesRoute
   ApiPublicInvoiceRoute: typeof ApiPublicInvoiceRoute
   ApiRecordsRoute: typeof ApiRecordsRoute
   ApiVaultRecordsRoute: typeof ApiVaultRecordsRoute
+  ApiWatchedWalletsRoute: typeof ApiWatchedWalletsRoute
   PayInvoiceIdRoute: typeof PayInvoiceIdRoute
+  ApiCronScanMorphRoute: typeof ApiCronScanMorphRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -481,6 +520,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppAgentsRouteImport
       parentRoute: typeof AppRoute
     }
+    '/api/watched-wallets': {
+      id: '/api/watched-wallets'
+      path: '/api/watched-wallets'
+      fullPath: '/api/watched-wallets'
+      preLoaderRoute: typeof ApiWatchedWalletsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/vault-records': {
       id: '/api/vault-records'
       path: '/api/vault-records'
@@ -514,6 +560,13 @@ declare module '@tanstack/react-router' {
       path: '/api/invoice-payment'
       fullPath: '/api/invoice-payment'
       preLoaderRoute: typeof ApiInvoicePaymentRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/health': {
+      id: '/api/health'
+      path: '/api/health'
+      fullPath: '/api/health'
+      preLoaderRoute: typeof ApiHealthRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/extension-pair': {
@@ -556,6 +609,13 @@ declare module '@tanstack/react-router' {
       path: '/api/agent-memory'
       fullPath: '/api/agent-memory'
       preLoaderRoute: typeof ApiAgentMemoryRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/cron/scan-morph': {
+      id: '/api/cron/scan-morph'
+      path: '/api/cron/scan-morph'
+      fullPath: '/api/cron/scan-morph'
+      preLoaderRoute: typeof ApiCronScanMorphRouteImport
       parentRoute: typeof rootRouteImport
     }
   }
@@ -603,12 +663,15 @@ const rootRouteChildren: RootRouteChildren = {
   ApiDatabaseResetRoute: ApiDatabaseResetRoute,
   ApiExtensionIntentRoute: ApiExtensionIntentRoute,
   ApiExtensionPairRoute: ApiExtensionPairRoute,
+  ApiHealthRoute: ApiHealthRoute,
   ApiInvoicePaymentRoute: ApiInvoicePaymentRoute,
   ApiInvoicesRoute: ApiInvoicesRoute,
   ApiPublicInvoiceRoute: ApiPublicInvoiceRoute,
   ApiRecordsRoute: ApiRecordsRoute,
   ApiVaultRecordsRoute: ApiVaultRecordsRoute,
+  ApiWatchedWalletsRoute: ApiWatchedWalletsRoute,
   PayInvoiceIdRoute: PayInvoiceIdRoute,
+  ApiCronScanMorphRoute: ApiCronScanMorphRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

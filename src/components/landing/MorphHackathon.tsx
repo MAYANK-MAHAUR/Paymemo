@@ -17,7 +17,7 @@ export function MorphHackathon() {
             <h2 className="mt-4 text-4xl sm:text-5xl font-semibold tracking-[-0.02em]">
               Built for Morph Hoodi testnet payment demos.
             </h2>
-            <p className="mt-5 text-lg leading-relaxed text-ink/65">
+            <p className="mt-5 text-lg leading-relaxed text-ink/80">
               PayMemo fits the hackathon's money-movement tracks by turning direct payments,
               wallet-assisted dApp transactions, bridges, payroll, and agent micropayments into
               private, exportable financial memory.
@@ -45,7 +45,7 @@ export function MorphHackathon() {
               >
                 <Icon className="h-5 w-5 text-pink" />
                 <div className="mt-4 text-sm font-semibold">{track.title}</div>
-                <p className="mt-2 text-xs leading-5 text-ink/60">{track.fit}</p>
+                <p className="mt-2 text-xs leading-5 text-ink/78">{track.fit}</p>
               </motion.div>
             );
           })}
@@ -64,7 +64,7 @@ export function MorphHackathon() {
 function Pill({ label, value }: { label: string; value: string }) {
   return (
     <div className="rounded-2xl border border-ink/25 bg-cream/60 px-4 py-3">
-      <div className="text-[10px] uppercase tracking-widest text-ink/45">{label}</div>
+      <div className="text-[10px] uppercase tracking-widest text-ink/68">{label}</div>
       <div className="mt-1 truncate text-sm font-semibold">{value}</div>
     </div>
   );

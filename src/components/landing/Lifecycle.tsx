@@ -45,9 +45,9 @@ export function Lifecycle() {
                   <div className={`relative z-10 grid h-14 w-14 place-items-center rounded-2xl ${s.color} text-white shadow-card`}>
                     <Icon className="h-6 w-6" />
                   </div>
-                  <div className="mt-4 font-mono text-[10px] uppercase tracking-widest text-ink/50">Step {String(i + 1).padStart(2, "0")}</div>
+                  <div className="mt-4 font-mono text-[10px] uppercase tracking-widest text-ink/72">Step {String(i + 1).padStart(2, "0")}</div>
                   <h3 className="mt-1 text-xl font-semibold">{s.label}</h3>
-                  <p className="mt-1 text-sm text-ink/60">{s.desc}</p>
+                  <p className="mt-1 text-sm text-ink/78">{s.desc}</p>
                 </motion.div>
               );
             })}

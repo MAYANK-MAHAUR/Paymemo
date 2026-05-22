@@ -1,4 +1,5 @@
 import { isAddress } from "./morph";
+import { getVaultAuthHeaders } from "./crypto-vault";
 
 const LEGACY_PARTNER_KEY = "paymemo:partner-wallets:v1";
 const PARTNER_WALLETS_PREFIX = "paymemo:partner-wallets:owner:";
@@ -9,7 +10,9 @@ export type PartnerWallet = {
 };
 
 function ownerKey(walletAddress: string | null | undefined) {
-  const normalized = String(walletAddress || "").trim().toLowerCase();
+  const normalized = String(walletAddress || "")
+    .trim()
+    .toLowerCase();
   if (!normalized) return "";
   return `${PARTNER_WALLETS_PREFIX}${normalized}`;
 }
@@ -55,7 +58,10 @@ export function readPartnerWallets(walletAddress?: string | null) {
   }
 }
 
-export function writePartnerWallets(walletAddress: string | null | undefined, wallets: PartnerWallet[]) {
+export function writePartnerWallets(
+  walletAddress: string | null | undefined,
+  wallets: PartnerWallet[],
+) {
   if (typeof window === "undefined") return;
   const key = walletAddress ? ownerKey(walletAddress) : LEGACY_PARTNER_KEY;
   if (!key) return;
@@ -69,7 +75,10 @@ export function writePartnerWallets(walletAddress: string | null | undefined, wa
   window.localStorage.setItem(key, JSON.stringify(normalized));
 }
 
-export function upsertPartnerWallet(walletAddress: string | null | undefined, wallet: PartnerWallet) {
+export function upsertPartnerWallet(
+  walletAddress: string | null | undefined,
+  wallet: PartnerWallet,
+) {
   const normalized = normalizePartnerWallet(wallet.address, wallet.label);
   if (!normalized) return readPartnerWallets(walletAddress ?? undefined);
   const current = readPartnerWallets(walletAddress ?? undefined);
@@ -108,4 +117,80 @@ export function clearWalletDataFromExtension(walletAddress: string) {
     },
     window.location.origin,
   );
+}
+
+/**
+ * Server-side mirror — registers a watched wallet so the Vercel cron and
+ * the on-load catch-up scan know to sweep it even while the user's tab
+ * is closed. Failure is non-fatal (client-side watch still works).
+ */
+export async function registerWatchedWalletOnServer(input: {
+  ownerWallet: string;
+  watchedAddress: string;
+  label?: string;
+  enabled?: boolean;
+  /** Optional: signed authorization message proving user intent. */
+  authSignature?: string;
+  authMessage?: string;
+}) {
+  try {
+    const response = await fetch("/api/watched-wallets", {
+      method: "POST",
+      headers: { "content-type": "application/json", ...getVaultAuthHeaders() },
+      body: JSON.stringify({
+        ownerWallet: input.ownerWallet.toLowerCase(),
+        watchedAddress: input.watchedAddress.toLowerCase(),
+        label: input.label ?? "",
+        enabled: input.enabled ?? true,
+        authSignature: input.authSignature,
+        authMessage: input.authMessage,
+      }),
+    });
+    return response.ok;
+  } catch {
+    return false;
+  }
+}
+
+export async function unregisterWatchedWalletOnServer(input: {
+  ownerWallet: string;
+  watchedAddress: string;
+}) {
+  try {
+    const response = await fetch("/api/watched-wallets", {
+      method: "DELETE",
+      headers: { "content-type": "application/json", ...getVaultAuthHeaders() },
+      body: JSON.stringify({
+        ownerWallet: input.ownerWallet.toLowerCase(),
+        watchedAddress: input.watchedAddress.toLowerCase(),
+      }),
+    });
+    return response.ok;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Ask the server to sweep this user's watched wallets right now. Run on
+ * dashboard mount so users see anything that happened while they were
+ * offline. Returns the scan summary or null on failure.
+ */
+export async function triggerServerCatchUpScan(ownerWallet: string) {
+  try {
+    const response = await fetch("/api/cron/scan-morph", {
+      method: "POST",
+      headers: { "content-type": "application/json", ...getVaultAuthHeaders() },
+      body: JSON.stringify({ ownerWallet: ownerWallet.toLowerCase() }),
+    });
+    if (!response.ok) return null;
+    return (await response.json()) as {
+      ok: true;
+      walletsScanned: number;
+      detections: number;
+      latestBlock?: number;
+    };
+  } catch {
+    return null;
+  }
 }

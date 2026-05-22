@@ -1,0 +1,17 @@
+{
+  "name": "paymemo-morph-worker",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Real-time Morph Hoodi block-trigger for PayMemo's chain-watch scan. Watches for new blocks and pokes the PayMemo Vercel endpoint to run the actual scan.",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "start": "node index.js",
+    "dev": "node --watch index.js"
+  },
+  "dependencies": {
+    "ws": "^8.18.0"
+  }
+}

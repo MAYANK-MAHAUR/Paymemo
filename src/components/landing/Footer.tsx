@@ -4,7 +4,7 @@ import { Logo } from "@/components/brand/Logo";
 export function Footer() {
   return (
     <footer className="px-6 py-10 border-t border-ink/35">
-      <div className="mx-auto max-w-7xl flex flex-wrap items-center justify-between gap-6 text-sm text-ink/60">
+      <div className="mx-auto max-w-7xl flex flex-wrap items-center justify-between gap-6 text-sm text-ink/78">
         <div className="flex items-center gap-2">
           <Logo size={24} className="rounded-[8px]" />
           <span className="font-semibold text-ink">PayMemo</span>

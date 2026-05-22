@@ -55,7 +55,15 @@ const cats = [
   "API Payment",
   "Agent Task Payment",
 ];
-const statuses = ["All", "confirmed", "pending_signature", "pending_chain", "failed", "needs-review", "rejected"];
+const statuses = [
+  "All",
+  "confirmed",
+  "pending_signature",
+  "pending_chain",
+  "failed",
+  "needs-review",
+  "rejected",
+];
 
 function downloadCsv(rows: LedgerRow[]) {
   const csvRows = [
@@ -233,7 +241,7 @@ function Ledger() {
       <div className="p-6 lg:p-10 space-y-5">
         <div className="rounded-2xl border border-ink/35 bg-white p-4 shadow-soft flex flex-wrap items-center gap-3">
           <div className="flex items-center gap-2 rounded-xl border border-ink/35 bg-cream/60 px-3 py-2 flex-1 min-w-[220px]">
-            <Search className="h-4 w-4 text-ink/50" />
+            <Search className="h-4 w-4 text-ink/72" />
             <input
               value={q}
               onChange={(e) => setQ(e.target.value)}
@@ -266,15 +274,15 @@ function Ledger() {
           </button>
         </div>
 
-        <div className="rounded-3xl border border-ink/35 bg-white shadow-soft overflow-hidden">
+        <div className="rounded-3xl border border-ink/35 bg-white shadow-soft overflow-x-auto">
           {saveStatus && (
             <div className="border-b border-ink/15 bg-mint/10 px-5 py-2 text-xs font-semibold text-ink">
               {saveStatus}
             </div>
           )}
-          <table className="w-full text-sm">
+          <table className="w-full min-w-[1180px] text-sm">
             <thead>
-              <tr className="text-[10px] uppercase tracking-widest text-ink/50 bg-cream/60">
+              <tr className="text-[10px] uppercase tracking-widest text-ink/72 bg-cream/60">
                 {[
                   "Date",
                   "Tx hash",
@@ -285,7 +293,10 @@ function Ledger() {
                   "Status",
                   "",
                 ].map((h, index) => (
-                  <th key={`${h}-${index}`} className="text-left font-medium px-5 py-3">
+                  <th
+                    key={`${h}-${index}`}
+                    className="text-left font-medium px-5 py-3 whitespace-nowrap"
+                  >
                     {h}
                   </th>
                 ))}
@@ -297,26 +308,34 @@ function Ledger() {
                   key={`${t.source}-${t.id}`}
                   className="border-t border-ink/30 hover:bg-cream/40"
                 >
-                  <td className="px-5 py-3.5 text-ink/60">{t.date}</td>
-                  <td className="px-5 py-3.5 font-mono text-xs">{t.hash}</td>
-                  <td className="px-5 py-3.5 font-mono">
-                    {t.amount} <span className="text-ink/50">{t.token}</span>
+                  <td className="px-5 py-3.5 text-ink/78 whitespace-nowrap">{t.date}</td>
+                  <td className="px-5 py-3.5 font-mono text-xs">
+                    <span title={t.hash} className="block max-w-[160px] truncate">
+                      {t.hash}
+                    </span>
+                  </td>
+                  <td className="px-5 py-3.5 font-mono whitespace-nowrap">
+                    {t.amount} <span className="text-ink/72">{t.token}</span>
                   </td>
                   <td className="px-5 py-3.5">
-                    <span className="rounded-full border border-ink/35 bg-cream px-2 py-0.5 text-[10px] font-medium">
+                    <span className="inline-block whitespace-nowrap rounded-full border border-ink/35 bg-cream px-2.5 py-0.5 text-[10px] font-medium">
                       {t.category}
                     </span>
                   </td>
-                  <td className="px-5 py-3.5">{t.counterparty}</td>
-                  <td className="px-5 py-3.5 text-ink/70">{t.note}</td>
-                  <td className="px-5 py-3.5">
+                  <td className="px-5 py-3.5 whitespace-nowrap">{t.counterparty}</td>
+                  <td className="px-5 py-3.5 text-ink/82 align-top">
+                    <span className="block min-w-[200px] max-w-[340px] whitespace-normal break-words leading-snug">
+                      {t.note}
+                    </span>
+                  </td>
+                  <td className="px-5 py-3.5 whitespace-nowrap">
                     <StatusBadge status={t.status} />
                   </td>
                   <td className="px-5 py-3.5 text-right">
                     <button
                       type="button"
                       onClick={() => setEditing(t)}
-                      className="inline-flex items-center gap-1 rounded-lg border border-ink/25 px-2 py-1 text-xs font-semibold text-ink/70 hover:text-ink"
+                      className="inline-flex items-center gap-1 rounded-lg border border-ink/25 px-2 py-1 text-xs font-semibold text-ink/82 hover:text-ink"
                       disabled={t.category === "Encrypted"}
                       title={t.category === "Encrypted" ? "Unlock vault to edit" : "Edit record"}
                     >
@@ -327,7 +346,7 @@ function Ledger() {
               ))}
               {rows.length === 0 && (
                 <tr>
-                  <td colSpan={8} className="px-5 py-16 text-center text-ink/50">
+                  <td colSpan={8} className="px-5 py-16 text-center text-ink/72">
                     No records match your filters.
                   </td>
                 </tr>
@@ -374,7 +393,7 @@ function Select({
   return (
     <label className="inline-flex items-center gap-2 rounded-xl border border-ink/35 bg-cream/60 px-3 py-2 text-sm">
       {icon}
-      <span className="text-ink/55">{label}:</span>
+      <span className="text-ink/75">{label}:</span>
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}

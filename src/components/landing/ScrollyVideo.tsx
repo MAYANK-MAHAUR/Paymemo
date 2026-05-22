@@ -35,14 +35,14 @@ export function ScrollyVideo() {
           style={{ opacity: backdropOpacity }}
           className="absolute inset-0 flex flex-col items-center justify-center px-6 pointer-events-none"
         >
-          <span className="text-[10px] uppercase tracking-[0.22em] text-ink/50">
+          <span className="text-[10px] uppercase tracking-[0.22em] text-ink/72">
             Watch it work
           </span>
           <h2 className="mt-3 text-center text-4xl sm:text-5xl lg:text-6xl font-semibold tracking-[-0.02em] max-w-[18ch]">
             See PayMemo in{" "}
             <span className="font-serif-italic text-gradient-aurora">motion.</span>
           </h2>
-          <p className="mt-4 max-w-[48ch] text-center text-ink/60">
+          <p className="mt-4 max-w-[48ch] text-center text-ink/78">
             Scroll to step inside the demo.
           </p>
         </motion.div>

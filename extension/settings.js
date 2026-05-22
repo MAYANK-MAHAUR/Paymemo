@@ -4,6 +4,7 @@ const chainWatchInput = document.querySelector("#chainWatchEnabled");
 const chainWatchText = document.querySelector("#chainWatchText");
 const watchedAddressesInput = document.querySelector("#watchedAddresses");
 const autoOpenChainWatchPromptInput = document.querySelector("#autoOpenChainWatchPrompt");
+const popupForPartnerWalletsInput = document.querySelector("#popupForPartnerWallets");
 const settingsStatus = document.querySelector("#settingsStatus");
 
 let currentSettings = {};
@@ -56,6 +57,9 @@ function applySettings(settings) {
   chainWatchText.textContent = settings.chainWatchEnabled ? "Watching Morph" : "Paused";
   watchedAddressesInput.value = formatWatchedWallets(settings);
   autoOpenChainWatchPromptInput.checked = settings.autoOpenChainWatchPrompt !== false;
+  if (popupForPartnerWalletsInput) {
+    popupForPartnerWalletsInput.checked = Boolean(settings.popupForPartnerWallets);
+  }
 }
 
 async function load() {
@@ -79,6 +83,7 @@ async function save() {
       watchedAddresses: watched.addresses,
       watchedWalletLabels: watched.labels,
       autoOpenChainWatchPrompt: autoOpenChainWatchPromptInput.checked,
+      popupForPartnerWallets: Boolean(popupForPartnerWalletsInput?.checked),
     },
   });
   applySettings(response.settings || {});
@@ -105,7 +110,7 @@ document.querySelector("#openSidePanel").addEventListener("click", async () => {
 });
 
 document.querySelector("#openReview").addEventListener("click", () => {
-  const url = `${(currentSettings.appUrl || "http://127.0.0.1:5174").replace(/\/$/, "")}/app/review`;
+  const url = `${(currentSettings.appUrl || "https://paymemo.vercel.app").replace(/\/$/, "")}/app/review`;
   chrome.tabs.create({ url });
 });
 

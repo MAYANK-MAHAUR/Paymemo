@@ -46,7 +46,7 @@ export function Modes() {
             Two ways to add{" "}
             <span className="font-serif-italic">meaning</span> to a transaction.
           </h2>
-          <p className="mt-5 text-lg text-ink/65 leading-relaxed">
+          <p className="mt-5 text-lg text-ink/80 leading-relaxed">
             Pay inside PayMemo, or let the extension watch the wallets and dApps you already use.
             Either way, every detected transaction can be reviewed, tagged, verified, and remembered.
           </p>
@@ -70,7 +70,7 @@ export function Modes() {
                   >
                     <Icon className="h-6 w-6" />
                   </div>
-                  <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-ink/40">
+                  <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-ink/65">
                     {m.tag}
                   </span>
                 </div>
@@ -78,10 +78,10 @@ export function Modes() {
                 <h3 className="mt-7 text-2xl sm:text-3xl font-semibold tracking-tight">
                   {m.title}
                 </h3>
-                <p className="mt-2 text-sm font-medium text-ink/70">
+                <p className="mt-2 text-sm font-medium text-ink/82">
                   {m.subtitle}
                 </p>
-                <p className="mt-4 text-base text-ink/60 leading-relaxed">
+                <p className="mt-4 text-base text-ink/78 leading-relaxed">
                   {m.description}
                 </p>
 
@@ -94,12 +94,12 @@ export function Modes() {
                         className="flex items-center gap-3 rounded-2xl bg-cream/70 border border-ink/30 p-3.5"
                       >
                         <div className="grid h-8 w-8 place-items-center rounded-xl bg-white border border-ink/35">
-                          <SIcon className="h-4 w-4 text-ink/70" />
+                          <SIcon className="h-4 w-4 text-ink/82" />
                         </div>
-                        <span className="font-mono text-[10px] uppercase tracking-widest text-ink/40 w-6">
+                        <span className="font-mono text-[10px] uppercase tracking-widest text-ink/65 w-6">
                           0{idx + 1}
                         </span>
-                        <span className="text-sm text-ink/80">{s.label}</span>
+                        <span className="text-sm text-ink/88">{s.label}</span>
                       </div>
                     );
                   })}

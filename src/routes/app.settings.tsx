@@ -25,6 +25,50 @@ function Settings() {
   const [lastSync, setLastSync] = useState("Not synced yet");
   const [message, setMessage] = useState("Encrypted records are stored in the PayMemo database.");
   const [walletPickerOpen, setWalletPickerOpen] = useState(false);
+  const [healthStatus, setHealthStatus] = useState("");
+
+  const runHealthCheck = async () => {
+    setHealthStatus("Checking…");
+    try {
+      const response = await fetch("/api/health");
+      const payload = await response.json();
+      const lines: string[] = [];
+      lines.push(
+        `Server: ${payload.server?.runtime ?? "unknown"} · total ${payload.totalLatencyMs}ms`,
+      );
+      lines.push(
+        `Database: ${payload.database?.backend}` +
+          ` · configured=${payload.database?.configured}` +
+          ` · reachable=${payload.database?.reachable}` +
+          (payload.database?.latencyMs != null ? ` · ${payload.database.latencyMs}ms` : "") +
+          (payload.database?.error ? ` · err=${payload.database.error}` : ""),
+      );
+      lines.push(
+        `Morph RPC: reachable=${payload.chainWatch?.morph?.reachable}` +
+          (payload.chainWatch?.morph?.latencyMs != null
+            ? ` · ${payload.chainWatch.morph.latencyMs}ms`
+            : "") +
+          (payload.chainWatch?.morph?.latestBlock != null
+            ? ` · block #${payload.chainWatch.morph.latestBlock}`
+            : ""),
+      );
+      lines.push(`Cron secret: ${payload.chainWatch?.cronSecretConfigured ? "set" : "MISSING"}`);
+      setHealthStatus(lines.join("\n"));
+      if (!payload.database?.reachable) {
+        notify.error(
+          "Database not reachable",
+          payload.database?.configured
+            ? "Supabase is configured but the request failed. Check SUPABASE_URL / service-role key in Vercel."
+            : "Supabase is not configured. Set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in Vercel.",
+        );
+      } else {
+        notify.success("All systems up", "Database and Morph RPC are reachable.");
+      }
+    } catch (error) {
+      setHealthStatus(`Failed: ${error instanceof Error ? error.message : "unknown"}`);
+      notify.error("Health check failed", "See the readout above.");
+    }
+  };
 
   const loadRecords = async (wallet = walletAddress) => {
     if (!wallet) {
@@ -153,7 +197,7 @@ function Settings() {
           <Row k="Algorithm" v="AES-256-GCM" />
           <Row k="Key derivation" v="Wallet signature" />
           <Row k="Plaintext storage" v="Never for private fields" />
-          <p className="text-xs text-ink/55">
+          <p className="text-xs text-ink/75">
             Notes, labels, invoices, and agent reasons are encrypted before reaching the database.
           </p>
         </Card>
@@ -167,16 +211,26 @@ function Settings() {
           <Row k="Sensitive fields" v="Ciphertext only" />
           <Row k="Browser storage" v="Session cache only" />
           <p className="text-xs font-semibold text-red-900">{message}</p>
-          <Btn onClick={downloadEncryptedBackup}>
-            <Download className="h-3.5 w-3.5" /> Download encrypted backup
-          </Btn>
+          <div className="grid gap-2">
+            <Btn onClick={downloadEncryptedBackup}>
+              <Download className="h-3.5 w-3.5" /> Download encrypted backup
+            </Btn>
+            <Btn onClick={runHealthCheck}>
+              <ShieldCheck className="h-3.5 w-3.5" /> Check database + chain connectivity
+            </Btn>
+            {healthStatus && (
+              <pre className="mt-1 overflow-auto rounded-xl border border-ink/15 bg-ink/[0.03] p-3 text-[11px] leading-snug text-ink/82 whitespace-pre-wrap">
+                {healthStatus}
+              </pre>
+            )}
+          </div>
         </Card>
 
         <div className="rounded-3xl border border-destructive/30 bg-white p-6 shadow-soft lg:col-span-2">
           <div className="flex items-center gap-2 font-semibold text-destructive">
             <Trash2 className="h-4 w-4" /> Delete stored data
           </div>
-          <p className="mt-2 text-sm text-ink/60">
+          <p className="mt-2 text-sm text-ink/78">
             Delete either the encrypted vault records or every PayMemo database record owned by the
             connected wallet. Onchain transactions remain public on Morph.
           </p>
@@ -233,7 +287,7 @@ function Card({
 function Row({ k, v, mono }: { k: string; v: string; mono?: boolean }) {
   return (
     <div className="flex items-center justify-between gap-4 border-b border-ink/30 pb-2 text-sm">
-      <span className="text-ink/55">{k}</span>
+      <span className="text-ink/75">{k}</span>
       <span className={`text-right ${mono ? "font-mono" : ""}`}>{v}</span>
     </div>
   );

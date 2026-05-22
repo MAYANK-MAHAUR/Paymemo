@@ -82,7 +82,7 @@ function MorphTestnet() {
                 <h2 className="mt-4 max-w-2xl text-3xl font-semibold tracking-tight">
                   Build what moves money, then remember why it moved.
                 </h2>
-                <p className="mt-3 max-w-3xl text-sm leading-6 text-ink/60">
+                <p className="mt-3 max-w-3xl text-sm leading-6 text-ink/78">
                   PayMemo is positioned for the Build In! Payments hackathon across Payroll + B2B,
                   SME payments, FX treasury, and x402 agentic payments. The demo should show real
                   payment intent capture on Morph, not just a static ledger.
@@ -103,12 +103,12 @@ function MorphTestnet() {
                   >
                     <div className="flex items-center justify-between">
                       <Icon className="h-5 w-5 text-pink" />
-                      <span className="rounded-full bg-white px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest text-ink/50">
+                      <span className="rounded-full bg-white px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest text-ink/72">
                         {flow.state}
                       </span>
                     </div>
                     <div className="mt-4 text-sm font-semibold">{flow.title}</div>
-                    <p className="mt-2 text-xs leading-5 text-ink/60">{flow.text}</p>
+                    <p className="mt-2 text-xs leading-5 text-ink/78">{flow.text}</p>
                   </div>
                 );
               })}
@@ -159,8 +159,8 @@ function MorphTestnet() {
                     <div className="font-semibold">{track.title}</div>
                     <ArrowUpRight className="h-4 w-4 text-pink" />
                   </div>
-                  <p className="mt-2 text-xs leading-5 text-ink/60">{track.fit}</p>
-                  <div className="mt-3 rounded-xl bg-white px-3 py-2 text-xs text-ink/65">
+                  <p className="mt-2 text-xs leading-5 text-ink/78">{track.fit}</p>
+                  <div className="mt-3 rounded-xl bg-white px-3 py-2 text-xs text-ink/80">
                     {track.feature}
                   </div>
                 </div>
@@ -178,7 +178,7 @@ function MorphTestnet() {
                   key={item}
                   className="flex items-center gap-3 rounded-2xl border border-ink/25 bg-cream/60 px-3 py-2.5 text-sm"
                 >
-                  <span className="grid h-6 w-6 place-items-center rounded-full bg-white text-[10px] font-bold text-ink/50">
+                  <span className="grid h-6 w-6 place-items-center rounded-full bg-white text-[10px] font-bold text-ink/72">
                     {index + 1}
                   </span>
                   <span className="flex-1">{item}</span>
@@ -186,7 +186,7 @@ function MorphTestnet() {
                 </div>
               ))}
             </div>
-            <div className="mt-4 rounded-2xl border border-mint/30 bg-mint/10 p-4 text-xs leading-5 text-ink/65">
+            <div className="mt-4 rounded-2xl border border-mint/30 bg-mint/10 p-4 text-xs leading-5 text-ink/80">
               <ShieldCheck className="mb-2 h-4 w-4 text-mint" />
               The demo story is strongest when each transaction has public onchain proof plus
               private PayMemo context: purpose, counterparty, task, invoice, and export label.
@@ -209,7 +209,7 @@ function NetworkRow({
 }) {
   return (
     <div className="flex items-start justify-between gap-3 border-b border-cream/15 pb-2">
-      <span className="text-cream/50">{label}</span>
+      <span className="text-cream/75">{label}</span>
       <span className={`text-right ${mono ? "font-mono text-xs" : ""}`}>{value}</span>
     </div>
   );
@@ -221,7 +221,7 @@ function ResourceLink({ href, children }: { href: string; children: React.ReactN
       href={href}
       target="_blank"
       rel="noreferrer"
-      className="inline-flex items-center gap-1 rounded-full border border-cream/20 bg-cream/10 px-3 py-1.5 text-cream/80 hover:text-cream"
+      className="inline-flex items-center gap-1 rounded-full border border-cream/20 bg-cream/10 px-3 py-1.5 text-cream/90 hover:text-cream"
     >
       {children} <ExternalLink className="h-3 w-3" />
     </a>

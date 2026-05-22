@@ -46,7 +46,7 @@ export function AgentMemory() {
               PayMemo makes them explain why.
             </span>
           </h2>
-          <p className="mt-5 max-w-2xl text-lg leading-relaxed text-ink/65">
+          <p className="mt-5 max-w-2xl text-lg leading-relaxed text-ink/80">
             When an AI agent pays an API, hires another agent, bridges funds, or completes a paid
             task, PayMemo keeps the reason tied to the spend: task, tool, counterparty, policy, and
             private explanation.
@@ -69,7 +69,7 @@ export function AgentMemory() {
                   </span>
                   <span>
                     <span className="block text-sm font-semibold">{item.title}</span>
-                    <span className="mt-1 block text-sm leading-6 text-ink/60">{item.text}</span>
+                    <span className="mt-1 block text-sm leading-6 text-ink/78">{item.text}</span>
                   </span>
                 </motion.div>
               );
@@ -88,13 +88,13 @@ export function AgentMemory() {
             <div className="inline-flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-pink">
               <Bot className="h-4 w-4" /> Agent spend record
             </div>
-            <span className="rounded-full bg-cream/10 px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-cream/70">
+            <span className="rounded-full bg-cream/10 px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-cream/85">
               user reviewable
             </span>
           </div>
 
           <div className="mt-7 rounded-2xl bg-cream/10 p-5">
-            <div className="flex items-center justify-between text-xs text-cream/55">
+            <div className="flex items-center justify-between text-xs text-cream/78">
               <span>Research Agent</span>
               <span>0.20 USDC</span>
             </div>
@@ -107,7 +107,7 @@ export function AgentMemory() {
             {examples.map((example) => (
               <div
                 key={example}
-                className="rounded-2xl border border-cream/15 bg-cream/5 p-4 text-sm leading-6 text-cream/75"
+                className="rounded-2xl border border-cream/15 bg-cream/5 p-4 text-sm leading-6 text-cream/88"
               >
                 {example}
               </div>

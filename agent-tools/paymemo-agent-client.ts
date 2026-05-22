@@ -13,7 +13,7 @@ export type AgentPaymentIntentInput = {
 
 export async function createAgentPaymentIntent(
   input: AgentPaymentIntentInput,
-  baseUrl = "http://127.0.0.1:5174",
+  baseUrl = "https://paymemo.vercel.app",
 ) {
   const response = await fetch(`${baseUrl}/api/agent-memory`, {
     method: "POST",
@@ -30,7 +30,7 @@ export async function createAgentPaymentIntent(
 
 export async function createEncryptedAgentPaymentIntent(
   encryptedRecord: unknown,
-  baseUrl = "http://127.0.0.1:5174",
+  baseUrl = "https://paymemo.vercel.app",
 ) {
   const response = await fetch(`${baseUrl}/api/agent-payment-intent`, {
     method: "POST",
@@ -47,7 +47,7 @@ export async function createEncryptedAgentPaymentIntent(
 
 export async function listEncryptedAgentPaymentIntents(
   walletAddress: string,
-  baseUrl = "http://127.0.0.1:5174",
+  baseUrl = "https://paymemo.vercel.app",
 ) {
   const url = new URL("/api/agent-payment-intent", baseUrl);
   url.searchParams.set("wallet", walletAddress);
@@ -62,7 +62,7 @@ export async function listEncryptedAgentPaymentIntents(
 
 export async function listAgentPaymentMemory(
   filters: { agentId?: string; taskId?: string } = {},
-  baseUrl = "http://127.0.0.1:5174",
+  baseUrl = "https://paymemo.vercel.app",
 ) {
   const url = new URL("/api/agent-memory", baseUrl);
   if (filters.agentId) url.searchParams.set("agentId", filters.agentId);

@@ -7,24 +7,36 @@ import {
   decryptPrivateMetadata,
   getRememberedVaultKey,
   readVaultSession,
+  signWatchAuthorization,
 } from "@/lib/crypto-vault";
 import {
   fetchEncryptedVaultRecords,
   readEncryptedVaultRecords,
   type StoredVaultRecord,
 } from "@/lib/paymemo-vault";
-import {
-  morphTokens,
-} from "@/lib/morph";
+import { morphTokens } from "@/lib/morph";
 import {
   readPartnerWallets,
+  registerWatchedWalletOnServer,
   removePartnerWallet,
   syncPartnerWalletsToExtension,
+  triggerServerCatchUpScan,
+  unregisterWatchedWalletOnServer,
   upsertPartnerWallet,
   type PartnerWallet,
 } from "@/lib/watched-wallets";
 import type { LucideIcon } from "lucide-react";
-import { ArrowDownLeft, ArrowUpRight, Activity, Layers, AlertCircle, Plus, RadioTower, Trash2, Wallet } from "lucide-react";
+import {
+  ArrowDownLeft,
+  ArrowUpRight,
+  Activity,
+  Layers,
+  AlertCircle,
+  Plus,
+  RadioTower,
+  Trash2,
+  Wallet,
+} from "lucide-react";
 import { motion } from "framer-motion";
 import { PayMemoAreaChart } from "@/components/app/LazyCharts";
 import { useEffect, useMemo, useState } from "react";
@@ -72,19 +84,38 @@ function Dashboard() {
       const session = readVaultSession();
       const key = session ? await getRememberedVaultKey() : null;
       const wallet = session?.walletAddress ?? "";
-      const records = wallet ? await fetchEncryptedVaultRecords(wallet).catch(() => readEncryptedVaultRecords()) : [];
+      const records = wallet
+        ? await fetchEncryptedVaultRecords(wallet).catch(() => readEncryptedVaultRecords())
+        : [];
 
       if (!wallet || !key) {
         setWalletAddress(wallet);
         setRows(wallet ? records.map((record) => toLockedRow(record, wallet)) : []);
-        setMessage(wallet ? "Private notes locked. Connect wallet again to unlock notes." : "Connect wallet before continuing.");
+        setMessage(
+          wallet
+            ? "Private notes locked. Connect wallet again to unlock notes."
+            : "Connect wallet before continuing.",
+        );
         return;
       }
 
-      const decrypted = await Promise.all(records.map((record) => toDashboardRow(record, key, wallet)));
+      const decrypted = await Promise.all(
+        records.map((record) => toDashboardRow(record, key, wallet)),
+      );
       setWalletAddress(wallet);
       setRows(decrypted);
       setMessage(`${decrypted.length} encrypted records loaded for ${short(wallet)}.`);
+
+      // Server-side catch-up: scan Morph for anything that happened while
+      // the user was offline, then refresh the records once.
+      void triggerServerCatchUpScan(wallet).then((result) => {
+        if (result && result.detections > 0) {
+          notify.info(
+            "Caught up on Morph activity",
+            `${result.detections} new transaction${result.detections === 1 ? "" : "s"} added to Needs Review.`,
+          );
+        }
+      });
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Unable to load dashboard records.");
     }
@@ -92,7 +123,9 @@ function Dashboard() {
 
   useEffect(() => {
     void loadDashboard();
-    void loadPrices().then(setPrices).catch(() => setPrices({}));
+    void loadPrices()
+      .then(setPrices)
+      .catch(() => setPrices({}));
     const session = readVaultSession();
     setPartnerWallets(readPartnerWallets(session?.walletAddress));
   }, []);
@@ -107,18 +140,83 @@ function Dashboard() {
     setPartnerWallets(readPartnerWallets(account));
     setMessage(`Wallet connected and private notes unlocked: ${short(account)}.`);
     await loadDashboard();
+    // Server-side: register this wallet so the cron sweeps it even while
+    // the user's tab is closed, then kick off an immediate catch-up scan.
+    void registerWatchedWalletOnServer({
+      ownerWallet: account,
+      watchedAddress: account,
+      label: "My wallet",
+    });
+    readPartnerWallets(account).forEach((partner) => {
+      void registerWatchedWalletOnServer({
+        ownerWallet: account,
+        watchedAddress: partner.address,
+        label: partner.label,
+      });
+    });
+    void triggerServerCatchUpScan(account);
   }
 
-  function addPartnerWallet() {
+  async function addPartnerWallet() {
     if (!requireWallet()) return;
-    const ownerWallet = walletAddress || readVaultSession()?.walletAddress;
-    const next = upsertPartnerWallet(ownerWallet, { address: partnerAddress, label: partnerLabel });
+    const ownerWallet = (walletAddress || readVaultSession()?.walletAddress || "").toLowerCase();
+    if (!ownerWallet) {
+      setMessage("Please connect wallet before continuing.");
+      return;
+    }
+
+    const normalized = partnerAddress.trim().toLowerCase();
+    if (!/^0x[a-f0-9]{40}$/.test(normalized)) {
+      setMessage("Enter a valid 0x… EVM address before signing.");
+      notify.error("Invalid address", "Wallet address must be 0x + 40 hex chars.");
+      return;
+    }
+
+    // Friction-on-purpose: require the user to sign an explicit
+    // "authorize watching" message with their own wallet before we add a
+    // wallet to the watch list. Prevents accidental / unattended adds.
+    setMessage("Open your wallet and sign the authorize-watch message…");
+    let auth: Awaited<ReturnType<typeof signWatchAuthorization>> | null = null;
+    try {
+      auth = await signWatchAuthorization({
+        ownerWallet,
+        watchedAddress: normalized,
+        label: partnerLabel,
+        intent: normalized === ownerWallet ? "my-wallet" : "partner-wallet",
+      });
+    } catch (error) {
+      const text = error instanceof Error ? error.message : "Signature was cancelled.";
+      setMessage(`Add cancelled: ${text}`);
+      notify.info("Add cancelled", "Signature was rejected — no wallet added.");
+      return;
+    }
+
+    const next = upsertPartnerWallet(ownerWallet, {
+      address: normalized,
+      label: partnerLabel,
+    });
     setPartnerWallets(next);
     syncPartnerWalletsToExtension(next);
+    const just = next.find((wallet) => wallet.address === normalized);
+    if (just) {
+      void registerWatchedWalletOnServer({
+        ownerWallet,
+        watchedAddress: just.address,
+        label: just.label,
+        authSignature: auth.signature,
+        authMessage: auth.message,
+      });
+      void triggerServerCatchUpScan(ownerWallet);
+    }
     setPartnerAddress("");
     setPartnerLabel("Partner wallet");
-    setMessage("Partner wallets synced to the extension watcher.");
-    notify.success("Partner wallet added", "Synced to the extension watcher.");
+    setMessage(
+      "Partner wallet authorized and added. Server-side watcher is now scanning Morph for it.",
+    );
+    notify.success(
+      "Partner wallet added",
+      "Signed authorization saved. Server watcher will scan it even when this tab is closed.",
+    );
   }
 
   function deletePartnerWallet(address: string) {
@@ -127,7 +225,13 @@ function Dashboard() {
     const next = removePartnerWallet(ownerWallet, address);
     setPartnerWallets(next);
     syncPartnerWalletsToExtension(next);
-    setMessage("Partner wallet removed locally. Existing extension watch entries can be removed from the extension popup.");
+    if (ownerWallet) {
+      void unregisterWatchedWalletOnServer({
+        ownerWallet,
+        watchedAddress: address,
+      });
+    }
+    setMessage("Partner wallet removed locally and from the server watch list.");
     notify.info("Partner wallet removed", "Watcher list re-synced.");
   }
 
@@ -142,12 +246,16 @@ function Dashboard() {
   const totals = useMemo(() => {
     const confirmed = rows.filter((row) => row.status === "confirmed");
     return {
-      sent: confirmed.filter((row) => row.type === "Sent").reduce((sum, row) => sum + row.amount, 0),
+      sent: confirmed
+        .filter((row) => row.type === "Sent")
+        .reduce((sum, row) => sum + row.amount, 0),
       received: confirmed
         .filter((row) => row.type === "Received")
         .reduce((sum, row) => sum + row.amount, 0),
       confirmed: confirmed.length,
-      pending: rows.filter((row) => ["intent", "pending_signature", "pending_chain", "signed"].includes(row.status)).length,
+      pending: rows.filter((row) =>
+        ["intent", "pending_signature", "pending_chain", "signed"].includes(row.status),
+      ).length,
       needsReview: rows.filter((row) => row.status === "needs-review").length,
       sentUsd: confirmed
         .filter((row) => row.type === "Sent")
@@ -159,10 +267,28 @@ function Dashboard() {
   }, [prices, rows]);
 
   const cards = [
-    stat("Total Sent", formatUsd(totals.sentUsd), formatTokenTotal(totals.sent, rows), ArrowUpRight, "from-pink/20"),
-    stat("Total Received", formatUsd(totals.receivedUsd), formatTokenTotal(totals.received, rows), ArrowDownLeft, "from-mint/20"),
+    stat(
+      "Total Sent",
+      formatUsd(totals.sentUsd),
+      formatTokenTotal(totals.sent, rows),
+      ArrowUpRight,
+      "from-pink/20",
+    ),
+    stat(
+      "Total Received",
+      formatUsd(totals.receivedUsd),
+      formatTokenTotal(totals.received, rows),
+      ArrowDownLeft,
+      "from-mint/20",
+    ),
     stat("Confirmed Records", String(totals.confirmed), "from vault", Layers, "from-ink/15"),
-    stat("Pending Intents", String(totals.pending), "awaiting signature/chain", Activity, "from-papaya/30"),
+    stat(
+      "Pending Intents",
+      String(totals.pending),
+      "awaiting signature/chain",
+      Activity,
+      "from-papaya/30",
+    ),
     stat("Needs Review", String(totals.needsReview), "unlabeled txs", AlertCircle, "from-pink/20"),
   ];
 
@@ -186,7 +312,7 @@ function Dashboard() {
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-ink/35 bg-white p-4 shadow-soft">
           <div>
             <div className="text-sm font-semibold">Wallet data</div>
-            <div className={`text-xs ${walletAddress ? "text-ink/55" : "text-red-900"}`}>
+            <div className={`text-xs ${walletAddress ? "text-ink/75" : "text-red-900"}`}>
               {walletAddress ? `Signed vault: ${short(walletAddress)}` : "No wallet vault unlocked"}
             </div>
           </div>
@@ -213,10 +339,10 @@ function Dashboard() {
               <div className="flex items-center gap-2 text-sm font-semibold">
                 <RadioTower className="h-4 w-4 text-mint" /> Wallets to watch
               </div>
-              <p className="mt-1 text-xs text-ink/55">
+              <p className="mt-1 text-xs text-ink/75">
                 Add the wallets PayMemo should listen to on Morph Hoodi —
-                <strong> start with your own</strong>, then add teammate, vendor,
-                or partner wallets. Detections appear in{" "}
+                <strong> start with your own</strong>, then add teammate, vendor, or partner
+                wallets. Detections appear in{" "}
                 <Link to="/app/review" className="underline underline-offset-2 hover:text-ink">
                   Needs Review
                 </Link>{" "}
@@ -267,9 +393,12 @@ function Dashboard() {
           </div>
           <div className="mt-3 flex flex-wrap gap-2">
             {partnerWallets.map((wallet) => (
-              <span key={wallet.address} className="inline-flex items-center gap-2 rounded-full border border-ink/20 bg-cream/70 py-1 pl-3 pr-1 text-xs">
+              <span
+                key={wallet.address}
+                className="inline-flex items-center gap-2 rounded-full border border-ink/20 bg-cream/70 py-1 pl-3 pr-1 text-xs"
+              >
                 <strong>{wallet.label}</strong>
-                <span className="font-mono text-ink/55">{short(wallet.address)}</span>
+                <span className="font-mono text-ink/75">{short(wallet.address)}</span>
                 <button
                   onClick={() => deletePartnerWallet(wallet.address)}
                   className="grid h-6 w-6 place-items-center rounded-full hover:bg-destructive/10 hover:text-destructive"
@@ -279,7 +408,9 @@ function Dashboard() {
                 </button>
               </span>
             ))}
-            {partnerWallets.length === 0 && <span className="text-xs text-ink/45">No partner wallets added yet.</span>}
+            {partnerWallets.length === 0 && (
+              <span className="text-xs text-ink/68">No partner wallets added yet.</span>
+            )}
           </div>
         </div>
 
@@ -290,12 +421,8 @@ function Dashboard() {
             ...partnerWallets.map((wallet) => wallet.address),
           ]}
           labels={{
-            ...(walletAddress
-              ? { [walletAddress.toLowerCase()]: "My wallet" }
-              : {}),
-            ...Object.fromEntries(
-              partnerWallets.map((wallet) => [wallet.address, wallet.label]),
-            ),
+            ...(walletAddress ? { [walletAddress.toLowerCase()]: "My wallet" } : {}),
+            ...Object.fromEntries(partnerWallets.map((wallet) => [wallet.address, wallet.label])),
           }}
         />
 
@@ -308,14 +435,16 @@ function Dashboard() {
               transition={{ delay: i * 0.05 }}
               className="relative overflow-hidden rounded-2xl border border-ink/35 bg-white p-5 shadow-soft"
             >
-              <div className={`pointer-events-none absolute -inset-px rounded-2xl bg-gradient-to-br ${c.ring} to-transparent`} />
+              <div
+                className={`pointer-events-none absolute -inset-px rounded-2xl bg-gradient-to-br ${c.ring} to-transparent`}
+              />
               <div className="relative">
-                <div className="flex items-center justify-between text-[10px] uppercase tracking-widest text-ink/55">
+                <div className="flex items-center justify-between text-[10px] uppercase tracking-widest text-ink/75">
                   {c.l}
-                  <c.Icon className="h-4 w-4 text-ink/60" />
+                  <c.Icon className="h-4 w-4 text-ink/78" />
                 </div>
                 <div className="mt-3 text-3xl font-semibold tracking-tight">{c.v}</div>
-                <div className="mt-1 text-xs text-ink/50">{c.sub}</div>
+                <div className="mt-1 text-xs text-ink/72">{c.sub}</div>
               </div>
             </motion.div>
           ))}
@@ -325,7 +454,7 @@ function Dashboard() {
           <div className="flex items-center justify-between">
             <div>
               <div className="text-sm font-semibold">Wallet volume</div>
-              <div className="text-xs text-ink/50">Computed from confirmed PayMemo records</div>
+              <div className="text-xs text-ink/72">Computed from confirmed PayMemo records</div>
             </div>
             <div className="flex gap-3 text-xs">
               <span className="inline-flex items-center gap-1.5">
@@ -347,15 +476,18 @@ function Dashboard() {
           <div className="flex items-center justify-between border-b border-ink/35 px-6 py-4">
             <div>
               <div className="text-sm font-semibold">Recent activity</div>
-              <div className="text-xs text-ink/50">Latest entries from your encrypted ledger</div>
+              <div className="text-xs text-ink/72">Latest entries from your encrypted ledger</div>
             </div>
-            <Link to="/app/ledger" className="rounded-xl border border-ink/30 bg-cream/60 px-3 py-2 text-sm font-semibold">
+            <Link
+              to="/app/ledger"
+              className="rounded-xl border border-ink/30 bg-cream/60 px-3 py-2 text-sm font-semibold"
+            >
               Open ledger
             </Link>
           </div>
           <table className="w-full text-sm">
             <thead>
-              <tr className="text-[10px] uppercase tracking-widest text-ink/50">
+              <tr className="text-[10px] uppercase tracking-widest text-ink/72">
                 <th className="px-6 py-3 text-left font-medium">Date</th>
                 <th className="px-6 py-3 text-left font-medium">Type</th>
                 <th className="px-6 py-3 text-left font-medium">Counterparty / Note</th>
@@ -367,7 +499,7 @@ function Dashboard() {
             <tbody>
               {recent.map((t) => (
                 <tr key={t.id} className="border-t border-ink/30 hover:bg-cream/50">
-                  <td className="px-6 py-3.5 text-ink/60">{t.date}</td>
+                  <td className="px-6 py-3.5 text-ink/78">{t.date}</td>
                   <td className="px-6 py-3.5">
                     {t.type === "Sent" ? (
                       <span className="inline-flex items-center gap-1 text-pink">
@@ -383,7 +515,7 @@ function Dashboard() {
                   </td>
                   <td className="px-6 py-3.5">
                     <div className="font-medium">{t.counterparty}</div>
-                    <div className="text-xs text-ink/50">{t.note}</div>
+                    <div className="text-xs text-ink/72">{t.note}</div>
                   </td>
                   <td className="px-6 py-3.5">
                     <span className="rounded-full border border-ink/35 bg-cream px-2 py-0.5 text-[10px] font-medium">
@@ -400,8 +532,9 @@ function Dashboard() {
               ))}
               {recent.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="px-6 py-12 text-center text-sm text-ink/50">
-                    No PayMemo records yet. Create a payment intent or tag a wallet-assisted transaction.
+                  <td colSpan={6} className="px-6 py-12 text-center text-sm text-ink/72">
+                    No PayMemo records yet. Create a payment intent or tag a wallet-assisted
+                    transaction.
                   </td>
                 </tr>
               )}
@@ -419,7 +552,10 @@ function Dashboard() {
 }
 
 async function toDashboardRow(record: StoredVaultRecord, key: CryptoKey, walletAddress: string) {
-  const metadata = await decryptPrivateMetadata<Record<string, string>>(record.encryptedMetadata, key);
+  const metadata = await decryptPrivateMetadata<Record<string, string>>(
+    record.encryptedMetadata,
+    key,
+  );
   return toRow(record, walletAddress, {
     category: metadata.category || "Other",
     counterparty: metadata.counterparty || "Unknown",

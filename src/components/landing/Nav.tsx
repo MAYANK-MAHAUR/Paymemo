@@ -10,7 +10,7 @@ export function Nav() {
           <Logo size={32} className="rounded-[10px]" />
           <span className="font-semibold tracking-tight text-ink">PayMemo</span>
         </Link>
-        <nav className="hidden md:flex items-center gap-6 text-sm text-ink/70">
+        <nav className="hidden md:flex items-center gap-6 text-sm text-ink/82">
           <a href="#problem" className="hover:text-ink">
             Problem
           </a>
@@ -27,7 +27,7 @@ export function Nav() {
         <div className="flex items-center gap-2">
           <Link
             to="/install"
-            className="hidden sm:inline-flex h-9 items-center gap-1.5 rounded-full border border-ink/15 bg-white/70 px-3.5 text-sm font-medium text-ink/80 hover:text-ink hover:bg-white transition-colors"
+            className="hidden sm:inline-flex h-9 items-center gap-1.5 rounded-full border border-ink/15 bg-white/70 px-3.5 text-sm font-medium text-ink/88 hover:text-ink hover:bg-white transition-colors"
           >
             <Download className="h-3.5 w-3.5" />
             Get Extension

@@ -205,6 +205,18 @@ function renderOverlay(payload) {
             #0b0b0f;
           color: white;
         }
+        /* Red theme: a transaction was detected on a partner wallet, not
+           the user's own. Make this very visually distinct so the user
+           never mistakes a partner-tx prompt for one of their own. */
+        .panel.partner .top {
+          background:
+            linear-gradient(120deg, rgba(255,82,82,.35), rgba(11,11,15,.98)),
+            #1a0a0a;
+        }
+        .panel.partner .logo {
+          box-shadow: 0 18px 40px rgba(255,82,82,.35);
+        }
+        .panel.partner .eyebrow { color: #ffb4b4; }
         .grain {
           position: absolute;
           inset: 0;
@@ -331,6 +343,7 @@ function renderOverlay(payload) {
           cursor: pointer;
         }
         .primary { background: #5cff82; color: #071009; box-shadow: 0 18px 45px rgba(92,255,130,.18); }
+        .panel.partner .primary { background: #ff5c7a; color: #1a0a0a; box-shadow: 0 18px 45px rgba(255,92,122,.32); }
         .ghost { background: rgba(255,255,255,.08); color: rgba(247,248,242,.76); }
         .hint { margin: 11px 0 0; color: rgba(247,248,242,.52); font-size: 11px; line-height: 1.45; }
         @media (max-width: 520px) {
@@ -343,14 +356,14 @@ function renderOverlay(payload) {
         }
       </style>
       <div class="wrap">
-        <form class="panel">
+        <form class="panel ${payload.isPartnerWallet ? "partner" : ""}">
           <div class="top">
             <div class="grain"></div>
             <div class="top-inner">
               <img class="logo" src="${chrome.runtime.getURL("icons/icon-48.png")}" alt="PayMemo" width="42" height="42" />
               <div>
-                <div class="eyebrow">PayMemo Wallet Assist</div>
-                <h1>What is this transaction for?</h1>
+                <div class="eyebrow">${payload.isPartnerWallet ? `Partner wallet · ${(payload.walletLabel || "Watched partner")}` : "PayMemo Wallet Assist"}</div>
+                <h1>${payload.isPartnerWallet ? "Partner transaction detected" : "What is this transaction for?"}</h1>
               </div>
             </div>
           </div>
@@ -498,7 +511,12 @@ function extractTxHash(result) {
   return "";
 }
 
-const PAYMEMO_ALLOWED_HOSTS = new Set(["127.0.0.1", "localhost", "paymemo.app"]);
+const PAYMEMO_ALLOWED_HOSTS = new Set([
+  "127.0.0.1",
+  "localhost",
+  "paymemo.app",
+  "paymemo.vercel.app",
+]);
 
 function isAllowedPayMemoOrigin() {
   if (typeof window === "undefined" || !window.location) return false;
@@ -507,10 +525,13 @@ function isAllowedPayMemoOrigin() {
   if (location.protocol === "http:" && location.hostname !== "127.0.0.1" && location.hostname !== "localhost") {
     return false;
   }
-  return (
-    PAYMEMO_ALLOWED_HOSTS.has(location.hostname) ||
-    location.hostname.endsWith(".paymemo.app")
-  );
+  if (PAYMEMO_ALLOWED_HOSTS.has(location.hostname)) return true;
+  if (location.hostname.endsWith(".paymemo.app")) return true;
+  // Vercel preview deployments: `<project>-<hash>-<team>.vercel.app`.
+  if (location.hostname.endsWith(".vercel.app") && location.hostname.includes("paymemo")) {
+    return true;
+  }
+  return false;
 }
 
 window.addEventListener("message", async (event) => {
@@ -548,6 +569,18 @@ window.addEventListener("message", async (event) => {
     await sendRuntimeMessage({
       type: "PAYMEMO_CLEAR_WALLET_DATA",
       wallet: event.data.wallet,
+    });
+    return;
+  }
+
+  if (event.data?.type === "PAYMEMO_DAPP_TX_HANDLED") {
+    if (!isAllowedPayMemoOrigin()) return;
+    const txHash = String(event.data.txHash || "").toLowerCase();
+    if (!/^0x[0-9a-f]{64}$/.test(txHash)) return;
+    await sendRuntimeMessage({
+      type: "PAYMEMO_REGISTER_HANDLED_TX",
+      txHash,
+      origin: event.data.origin || "paymemo-dapp",
     });
     return;
   }
@@ -604,10 +637,20 @@ window.addEventListener("message", async (event) => {
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   if (message?.type !== "PAYMEMO_SHOW_CAPTURE_FOR_RECORD" || !message.record) return false;
 
+  // Never show the capture overlay on PayMemo's own domain — the dApp has its
+  // own /app/review UI and renders its own memo prompts. The overlay is for
+  // 3rd-party dApps only.
+  if (isAllowedPayMemoOrigin()) {
+    sendResponse({ ok: false, reason: "skipped-on-paymemo-origin" });
+    return true;
+  }
+
   const record = message.record;
   const payload = {
     method: "morph-chain-watch",
     providerLabel: "Morph Chain Watch",
+    isPartnerWallet: Boolean(record.isPartnerWallet),
+    walletLabel: record.walletLabel || record.project || "",
     params: [
       {
         from: record.from || "",

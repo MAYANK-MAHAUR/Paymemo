@@ -14,7 +14,7 @@ export function Problem() {
         <div className="max-w-3xl">
           <span className="text-xs font-mono uppercase tracking-[0.2em] text-pink">01 - Problem</span>
           <h2 className="mt-3 text-4xl sm:text-5xl font-semibold tracking-[-0.02em]">
-            Wallets show the transfer. <span className="font-serif-italic text-ink/50">Not the reason.</span>
+            Wallets show the transfer. <span className="font-serif-italic text-ink/72">Not the reason.</span>
           </h2>
         </div>
         <div className="mt-14 grid md:grid-cols-3 gap-5">
@@ -36,7 +36,7 @@ export function Problem() {
                     <Icon className="h-5 w-5" />
                   </div>
                   <p className="mt-6 text-2xl font-semibold leading-tight tracking-tight">{it.q}</p>
-                  <div className="mt-8 font-mono text-[10px] uppercase tracking-widest text-ink/50">Today's wallet UX</div>
+                  <div className="mt-8 font-mono text-[10px] uppercase tracking-widest text-ink/72">Today's wallet UX</div>
                 </div>
               </motion.div>
             );

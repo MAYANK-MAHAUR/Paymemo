@@ -2,6 +2,8 @@ const STORAGE_KEY = "paymemo.records";
 const SETTINGS_KEY = "paymemo.settings";
 const WATCH_STATE_KEY = "paymemo.morphWatchState";
 const INSTALL_TOKEN_KEY = "paymemo.installToken";
+const HANDLED_TX_HASHES_KEY = "paymemo.handledTxHashes";
+const HANDLED_TX_LIMIT = 500;
 const MORPH_WATCH_ALARM = "paymemo-morph-watch";
 const ERC20_TRANSFER_TOPIC = "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef";
 
@@ -13,14 +15,19 @@ const MORPH_KNOWN_TOKENS = {
 let memoPopupWindowId = null;
 
 const DEFAULT_SETTINGS = {
-  appUrl: "http://127.0.0.1:5174",
+  appUrl: "https://paymemo.vercel.app",
   rpcUrl: "https://rpc-hoodi.morph.network",
   chainId: 2910,
   enabled: true,
   chainWatchEnabled: false,
   watchedAddresses: [],
   watchedWalletLabels: {},
+  partnerWalletAddresses: [],
   autoOpenChainWatchPrompt: true,
+  // If false (default), the chain-watch popup only fires for transactions
+  // involving the user's own wallet — not for partner wallets. Partner-wallet
+  // detections are still recorded silently for review.
+  popupForPartnerWallets: false,
   morphWatchIntervalMs: 2500,
 };
 
@@ -107,6 +114,36 @@ async function writeWatchState(state, walletAddress) {
   const key = watchStateKey(walletAddress);
   await chrome.storage.local.set({ [key]: state });
   return state;
+}
+
+// Tx hashes the dApp itself has fully handled (e.g. the user just used the
+// /app/send flow which already memos and stores everything). The chain watch
+// skips these so the dApp doesn't get a duplicate popup for its own tx.
+async function readHandledTxHashes() {
+  const result = await chrome.storage.local.get(HANDLED_TX_HASHES_KEY);
+  const list = Array.isArray(result[HANDLED_TX_HASHES_KEY])
+    ? result[HANDLED_TX_HASHES_KEY]
+    : [];
+  return new Set(list.map((value) => String(value).toLowerCase()));
+}
+
+async function registerHandledTxHash(txHash, origin) {
+  const hash = String(txHash || "").toLowerCase();
+  if (!/^0x[0-9a-f]{64}$/.test(hash)) {
+    throw new Error("Invalid tx hash for register-handled.");
+  }
+  const set = await readHandledTxHashes();
+  set.add(hash);
+  const trimmed = Array.from(set).slice(-HANDLED_TX_LIMIT);
+  await chrome.storage.local.set({ [HANDLED_TX_HASHES_KEY]: trimmed });
+  // Also drop any extension record that was already created for this tx —
+  // the dApp owns it now, so it shouldn't sit in the review queue.
+  const records = await readRecords();
+  const filtered = records.filter(
+    (record) => String(record.txHash || "").toLowerCase() !== hash,
+  );
+  if (filtered.length !== records.length) await writeRecords(filtered);
+  return { handled: hash, origin: origin || "paymemo-dapp" };
 }
 
 async function readRecords() {
@@ -424,8 +461,30 @@ async function showRecordInActiveTab(record) {
 async function showChainWatchPrompt(records) {
   const settings = await readSettings();
   if (!settings.autoOpenChainWatchPrompt) return;
-  const items = Array.isArray(records) ? records : [records];
-  if (!items.length) return;
+  const allItems = Array.isArray(records) ? records : [records];
+  if (!allItems.length) return;
+
+  // Partner-wallet popups are opt-in. We still record the detection silently
+  // (it'll appear in the dApp's Needs Review queue), we just don't interrupt
+  // the user unless they've turned the toggle on.
+  const items = settings.popupForPartnerWallets
+    ? allItems
+    : allItems.filter((record) => !record.isPartnerWallet);
+
+  if (!items.length) {
+    // Still update the badge so the user sees something landed in review.
+    await chrome.action
+      .setBadgeText({
+        text: allItems.length > 1 ? String(allItems.length) : "!",
+      })
+      .catch(() => null);
+    await chrome.action
+      .setTitle({
+        title: `${allItems.length} partner-wallet Morph tx detected (popup muted)`,
+      })
+      .catch(() => null);
+    return;
+  }
 
   const tabs = await chrome.tabs.query({ active: true, lastFocusedWindow: true }).catch(() => []);
   const tab = tabs?.[0];
@@ -455,12 +514,14 @@ async function createChainWatchRecord(tx, receipt, direction, settings = {}, det
   const failed = receipt?.status === "0x0";
   const amount = details.amount || `${formatEther(tx.value)} ETH`;
   const labels = settings.watchedWalletLabels || {};
+  const partners = normalizeAddresses(settings.partnerWalletAddresses);
   const watchedWallet =
     details.watchedWallet ||
     (direction === "outgoing"
       ? String(tx.from || "").toLowerCase()
       : String(tx.to || "").toLowerCase());
   const walletLabel = labels[watchedWallet] || "Watched Morph wallet";
+  const isPartnerWallet = partners.includes(watchedWallet);
   const counterparty =
     details.counterparty ||
     (direction === "outgoing" ? tx.to || "contract interaction" : tx.from || "unknown sender");
@@ -491,6 +552,9 @@ async function createChainWatchRecord(tx, receipt, direction, settings = {}, det
     syncStatus: "local",
     detectionTiming: "post-broadcast",
     direction,
+    isPartnerWallet,
+    watchedWallet,
+    walletLabel,
   });
 }
 
@@ -575,6 +639,10 @@ async function scanMorphChainWatch({ forceRecent = false } = {}) {
   for (const state of states) {
     (state.seenTxHashes || []).forEach((hash) => seen.add(String(hash).toLowerCase()));
   }
+  // Also union in the dApp-owned hashes so /app/send transactions never
+  // trigger a duplicate popup or duplicate review record.
+  const handled = await readHandledTxHashes();
+  handled.forEach((hash) => seen.add(hash));
 
   const existingRecords = await readRecords();
   const existingTxHashes = new Set(
@@ -770,6 +838,13 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message?.type === "PAYMEMO_MERGE_WATCHED_WALLETS") {
     mergeWatchedWallets(message.wallets || [])
       .then((settings) => sendResponse({ ok: true, settings }))
+      .catch((error) => sendResponse({ ok: false, error: error.message }));
+    return true;
+  }
+
+  if (message?.type === "PAYMEMO_REGISTER_HANDLED_TX") {
+    registerHandledTxHash(message.txHash, message.origin)
+      .then(() => sendResponse({ ok: true }))
       .catch((error) => sendResponse({ ok: false, error: error.message }));
     return true;
   }

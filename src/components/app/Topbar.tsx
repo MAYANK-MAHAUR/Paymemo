@@ -94,11 +94,11 @@ export function Topbar({ title, subtitle }: { title: string; subtitle?: string }
       <div className="flex items-center gap-4 px-6 py-4 lg:px-10">
         <div className="min-w-0 flex-1">
           <h1 className="truncate text-2xl font-semibold tracking-tight">{title}</h1>
-          {subtitle && <p className="truncate text-sm text-ink/55">{subtitle}</p>}
+          {subtitle && <p className="truncate text-sm text-ink/75">{subtitle}</p>}
         </div>
 
         <div className="relative hidden w-80 items-center gap-2 rounded-full border border-ink/35 bg-white px-3 py-1.5 md:flex">
-          <Search className="h-4 w-4 text-ink/50" />
+          <Search className="h-4 w-4 text-ink/72" />
           <input
             value={query}
             onChange={(event) => setQuery(event.target.value)}
@@ -119,7 +119,7 @@ export function Topbar({ title, subtitle }: { title: string; subtitle?: string }
                   className="flex w-full items-center justify-between px-4 py-3 text-left text-sm hover:bg-cream/70"
                 >
                   <span className="font-medium">{result.label}</span>
-                  <span className="font-mono text-xs text-ink/45">{result.path}</span>
+                  <span className="font-mono text-xs text-ink/68">{result.path}</span>
                 </button>
               ))}
             </div>
@@ -140,7 +140,7 @@ export function Topbar({ title, subtitle }: { title: string; subtitle?: string }
                 setNotificationCounts({ pending: 0, review: 0, extension: 0 });
               }
             }}
-            className="relative grid h-9 w-9 place-items-center rounded-full border border-ink/35 bg-white text-ink/60 hover:text-ink"
+            className="relative grid h-9 w-9 place-items-center rounded-full border border-ink/35 bg-white text-ink/78 hover:text-ink"
             title="Notifications"
           >
             <Bell className="h-4 w-4" />
@@ -154,7 +154,7 @@ export function Topbar({ title, subtitle }: { title: string; subtitle?: string }
             <div className="absolute right-0 top-11 w-80 overflow-hidden rounded-2xl border border-ink/20 bg-white shadow-card">
               <div className="border-b border-ink/15 px-4 py-3">
                 <div className="text-sm font-semibold">PayMemo notifications</div>
-                <div className="text-xs text-ink/50">Live from vault and extension records</div>
+                <div className="text-xs text-ink/72">Live from vault and extension records</div>
               </div>
               <NotificationRow label="Pending intents" value={notificationCounts.pending} path="/app/ledger" onGo={go} />
               <NotificationRow label="Needs review" value={notificationCounts.review} path="/app/review" onGo={go} />
@@ -166,12 +166,12 @@ export function Topbar({ title, subtitle }: { title: string; subtitle?: string }
         <div className="group relative inline-flex items-center gap-2 rounded-full bg-ink py-1.5 pl-2 pr-3 text-xs font-semibold text-cream">
           <span className="h-6 w-6 rounded-full bg-aurora" />
           {wallet ? short(wallet) : "Vault locked"}
-          <HelpCircle className="h-3.5 w-3.5 text-cream/70" />
+          <HelpCircle className="h-3.5 w-3.5 text-cream/85" />
           <div className="pointer-events-none absolute right-0 top-11 z-50 w-80 rounded-2xl border border-ink/20 bg-white p-4 text-left text-xs font-normal leading-5 text-ink opacity-0 shadow-card transition-opacity group-hover:opacity-100">
             {wallet ? (
               <>
                 <div className="font-semibold">Vault unlocked in this tab</div>
-                <p className="mt-1 text-ink/60">
+                <p className="mt-1 text-ink/78">
                   Your wallet signature is cached in this browser tab so PayMemo can decrypt your
                   private notes, counterparties, project tags, and accounting context locally.
                   Closing the tab re-locks the vault. No transaction or spending permission is
@@ -181,7 +181,7 @@ export function Topbar({ title, subtitle }: { title: string; subtitle?: string }
             ) : (
               <>
                 <div className="font-semibold">What does vault locked mean?</div>
-                <p className="mt-1 text-ink/60">
+                <p className="mt-1 text-ink/78">
                   Connect wallet to load your PayMemo records. PayMemo asks for a harmless
                   signature to unlock encrypted private notes, counterparties, project tags, and
                   accounting context in this browser tab. It does not send a transaction or grant

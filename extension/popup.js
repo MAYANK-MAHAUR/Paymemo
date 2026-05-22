@@ -7,6 +7,7 @@ const chainWatchInput = document.querySelector("#chainWatchEnabled");
 const chainWatchText = document.querySelector("#chainWatchText");
 const watchedAddressesInput = document.querySelector("#watchedAddresses");
 const autoOpenChainWatchPromptInput = document.querySelector("#autoOpenChainWatchPrompt");
+const popupForPartnerWalletsInput = document.querySelector("#popupForPartnerWallets");
 const scanStatus = document.querySelector("#scanStatus");
 const totalEl = document.querySelector("#total");
 const pendingEl = document.querySelector("#pending");
@@ -178,6 +179,9 @@ function applySettings(settings) {
   chainWatchText.textContent = settings.chainWatchEnabled ? "Watching Morph" : "Paused";
   watchedAddressesInput.value = formatWatchedWallets(settings);
   autoOpenChainWatchPromptInput.checked = settings.autoOpenChainWatchPrompt !== false;
+  if (popupForPartnerWalletsInput) {
+    popupForPartnerWalletsInput.checked = Boolean(settings.popupForPartnerWallets);
+  }
   configureLivePopupScan();
 }
 
@@ -226,6 +230,7 @@ chainWatchInput.addEventListener("change", async () => {
       watchedAddresses: watched.addresses,
       watchedWalletLabels: watched.labels,
       autoOpenChainWatchPrompt: autoOpenChainWatchPromptInput.checked,
+      popupForPartnerWallets: Boolean(popupForPartnerWalletsInput?.checked),
     },
   });
   applySettings(settings.settings || {});
@@ -243,6 +248,7 @@ document.querySelector("#saveSettings").addEventListener("click", async () => {
       watchedAddresses: watched.addresses,
       watchedWalletLabels: watched.labels,
       autoOpenChainWatchPrompt: autoOpenChainWatchPromptInput.checked,
+      popupForPartnerWallets: Boolean(popupForPartnerWalletsInput?.checked),
     },
   });
   applySettings(response.settings || {});
@@ -252,7 +258,7 @@ document.querySelector("#saveSettings").addEventListener("click", async () => {
 });
 
 document.querySelector("#openApp").addEventListener("click", () => {
-  const url = `${(currentSettings.appUrl || "http://127.0.0.1:5174").replace(/\/$/, "")}/app/assist`;
+  const url = `${(currentSettings.appUrl || "https://paymemo.vercel.app").replace(/\/$/, "")}/app/assist`;
   chrome.tabs.create({ url });
 });
 
@@ -296,6 +302,7 @@ document.querySelector("#useLastWallet").addEventListener("click", async () => {
       watchedWalletLabels: labels,
       chainWatchEnabled: true,
       autoOpenChainWatchPrompt: autoOpenChainWatchPromptInput.checked,
+      popupForPartnerWallets: Boolean(popupForPartnerWalletsInput?.checked),
     },
   });
   applySettings(response.settings || {});
@@ -303,12 +310,12 @@ document.querySelector("#useLastWallet").addEventListener("click", async () => {
 });
 
 document.querySelector("#openReview").addEventListener("click", () => {
-  const url = `${(currentSettings.appUrl || "http://127.0.0.1:5174").replace(/\/$/, "")}/app/review`;
+  const url = `${(currentSettings.appUrl || "https://paymemo.vercel.app").replace(/\/$/, "")}/app/review`;
   chrome.tabs.create({ url });
 });
 
 document.querySelector("#openReviewBottom")?.addEventListener("click", () => {
-  const url = `${(currentSettings.appUrl || "http://127.0.0.1:5174").replace(/\/$/, "")}/app/review`;
+  const url = `${(currentSettings.appUrl || "https://paymemo.vercel.app").replace(/\/$/, "")}/app/review`;
   chrome.tabs.create({ url });
 });
 

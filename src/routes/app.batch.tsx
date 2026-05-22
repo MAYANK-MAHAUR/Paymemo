@@ -432,7 +432,7 @@ function Batch() {
         <div className="overflow-hidden rounded-3xl border border-ink/35 bg-white shadow-soft">
           <div className="flex flex-wrap items-end justify-between gap-4 border-b border-ink/35 px-6 py-5">
             <div className="min-w-[260px] flex-1">
-              <div className="text-[10px] font-bold uppercase tracking-widest text-ink/55">
+              <div className="text-[10px] font-bold uppercase tracking-widest text-ink/75">
                 Batch name
               </div>
               <input
@@ -440,7 +440,7 @@ function Batch() {
                 onChange={(event) => setBatchName(event.target.value)}
                 className="mt-1 w-full rounded-xl border border-ink/20 bg-cream/70 px-3 py-2 text-xl font-semibold tracking-tight outline-none"
               />
-              <div className="mt-1 text-xs text-ink/55">
+              <div className="mt-1 text-xs text-ink/75">
                 {rows.length} recipients - Morph Hoodi sequential dispatch
               </div>
             </div>
@@ -464,7 +464,7 @@ function Batch() {
           <div className="overflow-x-auto">
             <table className="w-full min-w-[1100px] text-sm">
               <thead>
-                <tr className="bg-cream/60 text-[10px] uppercase tracking-widest text-ink/50">
+                <tr className="bg-cream/60 text-[10px] uppercase tracking-widest text-ink/72">
                   {["Name", "Address", "Amount", "Category", "Private memo", "Tx hash", "Status"].map(
                     (h) => (
                       <th key={h} className="px-5 py-3 text-left font-medium">
@@ -518,7 +518,7 @@ function Batch() {
                         className="w-full rounded-xl border border-ink/25 bg-cream px-3 py-2 text-xs outline-none"
                       />
                     </td>
-                    <td className="px-5 py-3.5 font-mono text-xs text-ink/60">
+                    <td className="px-5 py-3.5 font-mono text-xs text-ink/78">
                       {row.txHash ? shortAddress(row.txHash) : "none"}
                     </td>
                     <td className="px-5 py-3.5">
@@ -565,7 +565,7 @@ function Batch() {
               >
                 <Play className="h-4 w-4" /> Dispatch sequentially
               </button>
-              <p className="text-[11px] leading-5 text-ink/55">
+              <p className="text-[11px] leading-5 text-ink/75">
                 Atomic batch uses your wallet's EIP-5792 <code>wallet_sendCalls</code>. If the wallet does
                 not support it, PayMemo falls back to one signature per recipient.
               </p>
@@ -577,7 +577,7 @@ function Batch() {
               <div className="flex items-center gap-2 text-sm font-semibold">
                 <Clock className="h-4 w-4" /> Saved sessions
               </div>
-              <p className="mt-1 text-xs text-ink/55">
+              <p className="mt-1 text-xs text-ink/75">
                 Reload a previous session to edit recipients or re-dispatch with the same members.
               </p>
               <div className="mt-3 space-y-2 max-h-60 overflow-y-auto pr-1">
@@ -590,12 +590,12 @@ function Batch() {
                   >
                     <div className="min-w-0">
                       <div className="truncate font-semibold text-ink">{record.id}</div>
-                      <div className="text-ink/55">
+                      <div className="text-ink/75">
                         {String(record.publicData.recipientCount ?? "?")} recipients ·{" "}
                         {String(record.publicData.token ?? "ETH")} · status {record.status}
                       </div>
                     </div>
-                    <span className="text-ink/55 font-mono">
+                    <span className="text-ink/75 font-mono">
                       {new Date(record.updatedAt).toLocaleDateString()}
                     </span>
                   </button>
@@ -604,7 +604,7 @@ function Batch() {
             </div>
           )}
 
-          <div className="rounded-3xl border border-ink/35 bg-cream/60 p-5 text-xs leading-5 text-ink/60">
+          <div className="rounded-3xl border border-ink/35 bg-cream/60 p-5 text-xs leading-5 text-ink/78">
             <div className="mb-2 flex items-center gap-2 font-semibold text-ink">
               <ReceiptText className="h-4 w-4" /> Real MVP behavior
             </div>
@@ -615,7 +615,7 @@ function Batch() {
             </div>
           </div>
 
-          <div className="rounded-3xl border border-mint/30 bg-mint/10 p-5 text-xs leading-5 text-ink/60">
+          <div className="rounded-3xl border border-mint/30 bg-mint/10 p-5 text-xs leading-5 text-ink/78">
             <div className="mb-2 flex items-center gap-2 font-semibold text-ink">
               <Lock className="h-4 w-4" /> Private by default
             </div>
@@ -681,7 +681,7 @@ function buildErc20Calldata(to: string, amount: string, decimals: number): `0x${
 function Row({ k, v, mono }: { k: string; v: string; mono?: boolean }) {
   return (
     <div className="flex items-center justify-between border-b border-ink/30 pb-2">
-      <span className="text-ink/55">{k}</span>
+      <span className="text-ink/75">{k}</span>
       <span className={mono ? "font-mono" : ""}>{v}</span>
     </div>
   );

@@ -59,7 +59,7 @@ const BarChartImpl = lazy(async () => {
 
 function ChartFallback({ children }: { children?: ReactNode }) {
   return (
-    <div className="grid h-full w-full place-items-center text-xs text-ink/40">
+    <div className="grid h-full w-full place-items-center text-xs text-ink/65">
       {children ?? "Loading chart..."}
     </div>
   );

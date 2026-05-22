@@ -1,9 +1,24 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { Topbar } from "@/components/app/Topbar";
-import { Check, FileSearch, RefreshCw } from "lucide-react";
+import { Check, ChevronDown, FileSearch, RefreshCw } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useExtensionRecords } from "@/lib/extension-records";
 import { notify } from "@/lib/notify";
+import {
+  encryptPrivateMetadata,
+  getRememberedVaultKey,
+  readVaultSession,
+} from "@/lib/crypto-vault";
+import {
+  saveEncryptedVaultRecord,
+  syncEncryptedVaultRecord,
+  toPrivateMetadata,
+  toPublicRecord,
+  type StoredVaultRecord,
+} from "@/lib/paymemo-vault";
+import { normalizeRecord, payMemoCategories, type PayMemoRecordInput } from "@/lib/paymemo-schema";
+import { morphHoodi } from "@/lib/morph";
+import { readPartnerWallets, type PartnerWallet } from "@/lib/watched-wallets";
 
 export const Route = createFileRoute("/app/review")({
   head: () => ({ meta: [{ title: "Review Queue | PayMemo" }] }),
@@ -19,6 +34,94 @@ function ReviewQueue() {
         .map((record, index) => toReviewItem(record, index)),
     [extensionQuery.data],
   );
+
+  const [ownerWallet, setOwnerWallet] = useState<string>("");
+  const [partnerWallets, setPartnerWallets] = useState<PartnerWallet[]>([]);
+
+  useEffect(() => {
+    const session = readVaultSession();
+    const owner = (session?.walletAddress ?? "").toLowerCase();
+    setOwnerWallet(owner);
+    setPartnerWallets(readPartnerWallets(owner || undefined));
+  }, []);
+
+  const walletBuckets = useMemo(() => {
+    const main = ownerWallet ? ownerWallet.toLowerCase() : "";
+    const labels = new Map<string, string>();
+    if (main) labels.set(main, "My wallet");
+    partnerWallets.forEach((wallet) => labels.set(wallet.address.toLowerCase(), wallet.label));
+
+    type Bucket = {
+      key: string;
+      label: string;
+      address: string;
+      records: ReviewItem[];
+      tone: "main" | "partner" | "unattributed";
+    };
+    const buckets = new Map<string, Bucket>();
+
+    function addToBucket(
+      key: string,
+      label: string,
+      address: string,
+      tone: Bucket["tone"],
+      record: ReviewItem,
+    ) {
+      const current = buckets.get(key);
+      if (current) {
+        current.records.push(record);
+        return;
+      }
+      buckets.set(key, { key, label, address, tone, records: [record] });
+    }
+
+    for (const record of extensionRecords) {
+      const from = (record.raw.from ?? "").toLowerCase();
+      const to = (record.raw.to ?? "").toLowerCase();
+      const matchesMain = main && (from === main || to === main);
+      const partnerMatch = (() => {
+        const partner = partnerWallets.find((wallet) => {
+          const watched = wallet.address.toLowerCase();
+          return from === watched || to === watched;
+        });
+        return partner ? partner.address.toLowerCase() : "";
+      })();
+
+      if (matchesMain) {
+        addToBucket(main, labels.get(main) ?? "My wallet", main, "main", record);
+      } else if (partnerMatch) {
+        addToBucket(
+          partnerMatch,
+          labels.get(partnerMatch) ?? "Partner wallet",
+          partnerMatch,
+          "partner",
+          record,
+        );
+      } else {
+        addToBucket("__unattributed", "Unattributed", "", "unattributed", record);
+      }
+    }
+
+    const ordered = Array.from(buckets.values()).sort((a, b) => {
+      const order = { main: 0, partner: 1, unattributed: 2 };
+      return order[a.tone] - order[b.tone];
+    });
+    return ordered;
+  }, [extensionRecords, ownerWallet, partnerWallets]);
+
+  // Collapse state per wallet bucket. Default: main + partners expanded,
+  // unattributed collapsed.
+  const [collapsedKeys, setCollapsedKeys] = useState<Record<string, boolean>>({});
+  const isCollapsed = (key: string) =>
+    collapsedKeys[key] ??
+    walletBuckets.find((bucket) => bucket.key === key)?.tone === "unattributed";
+  const toggleCollapse = (key: string) =>
+    setCollapsedKeys((current) => ({
+      ...current,
+      [key]: !(
+        current[key] ?? walletBuckets.find((bucket) => bucket.key === key)?.tone === "unattributed"
+      ),
+    }));
   const [draft, setDraft] = useState({
     category: "Other",
     counterparty: "",
@@ -55,16 +158,23 @@ function ReviewQueue() {
   async function confirmActive() {
     if (!active) return;
     setActionMessage("Saving review...");
+
+    // Build the canonical confirmed record once, used for both the
+    // extension-intent store (review queue source) and the encrypted vault
+    // (ledger source).
+    const reviewedAt = new Date().toISOString();
+    const confirmedPayload = {
+      ...active.raw,
+      id: active.id,
+      ...draft,
+      status: "confirmed" as const,
+      reviewedAt,
+    };
+
     const response = await fetch("/api/extension-intent", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({
-        ...active.raw,
-        id: active.id,
-        ...draft,
-        status: "confirmed",
-        reviewedAt: new Date().toISOString(),
-      }),
+      body: JSON.stringify(confirmedPayload),
     }).catch(() => null);
 
     if (!response?.ok) {
@@ -73,9 +183,71 @@ function ReviewQueue() {
       return;
     }
 
+    // Mirror to the encrypted vault so it shows up in /app/ledger as a
+    // confirmed entry. Without this, the row only ever lives in
+    // `extension_records` and never reaches the ledger view.
+    const session = readVaultSession();
+    let ledgerSynced: "synced" | "local-only" | "skipped" = "skipped";
+    if (session?.walletAddress) {
+      try {
+        const key = await getRememberedVaultKey();
+        if (key) {
+          const category = (payMemoCategories as readonly string[]).includes(draft.category)
+            ? (draft.category as PayMemoRecordInput["category"])
+            : ("Other" as PayMemoRecordInput["category"]);
+          const normalized = normalizeRecord({
+            ...confirmedPayload,
+            chainId: active.raw.chainId ?? morphHoodi.chainId,
+            chainName: active.raw.chainName ?? morphHoodi.name,
+            mode: "wallet-assist",
+            source: active.raw.source ?? "needs-review",
+            to: active.raw.to || session.walletAddress,
+            amount: active.raw.amount || "0",
+            token: active.raw.token || "ETH",
+            category,
+          });
+          const encryptedMetadata = await encryptPrivateMetadata(
+            toPrivateMetadata(normalized),
+            key,
+            session.walletAddress,
+          );
+          const stored: StoredVaultRecord = {
+            id: normalized.id ?? active.id,
+            walletAddress: session.walletAddress,
+            publicRecord: toPublicRecord(normalized),
+            encryptedMetadata,
+            syncStatus: "local",
+            updatedAt: reviewedAt,
+          };
+          saveEncryptedVaultRecord(stored);
+          ledgerSynced = "local-only";
+          try {
+            await syncEncryptedVaultRecord({ ...stored, syncStatus: "synced" });
+            saveEncryptedVaultRecord({ ...stored, syncStatus: "synced" });
+            ledgerSynced = "synced";
+          } catch {
+            saveEncryptedVaultRecord({ ...stored, syncStatus: "sync-failed" });
+          }
+        }
+      } catch (error) {
+        console.warn("[paymemo] vault mirror failed", error);
+      }
+    }
+
     await extensionQuery.refetch();
-    setActionMessage("Recorded. This payment left Needs Review.");
-    notify.success("Review recorded", "Transaction left Needs Review.");
+    setActionMessage(
+      ledgerSynced === "synced"
+        ? "Recorded. Saved to your encrypted Ledger as confirmed."
+        : ledgerSynced === "local-only"
+          ? "Recorded locally. Sync to your Ledger failed — try again from /app/ledger."
+          : "Recorded. Unlock your vault on the dashboard to also save this to the Ledger.",
+    );
+    notify.success(
+      "Review recorded",
+      ledgerSynced === "synced"
+        ? "Confirmed — view it in your Ledger."
+        : "Confirmed in the review queue.",
+    );
   }
 
   return (
@@ -89,7 +261,7 @@ function ReviewQueue() {
           <div className="flex flex-wrap items-center justify-between gap-3 border-b border-ink/25 px-5 py-4">
             <div>
               <div className="text-sm font-semibold">Payments to review</div>
-              <div className="text-xs text-ink/50">
+              <div className="text-xs text-ink/72">
                 Click a transaction, add context, then record it.
               </div>
             </div>
@@ -101,32 +273,85 @@ function ReviewQueue() {
             </button>
           </div>
           <div className="divide-y divide-ink/15">
-            {extensionRecords.map((item) => (
-              <button
-                key={item.id}
-                onClick={() => setActiveId(item.id)}
-                className={`block w-full p-5 text-left transition-colors ${
-                  active?.id === item.id ? "bg-mint/10" : "bg-white hover:bg-cream/60"
-                }`}
-              >
-                <div className="flex flex-wrap items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-ink/45">
-                      <FileSearch className="h-3.5 w-3.5" /> {item.source}
+            {walletBuckets.map((bucket) => {
+              const collapsed = isCollapsed(bucket.key);
+              const toneStyles =
+                bucket.tone === "main"
+                  ? "border-mint/40 bg-mint/10 text-ink"
+                  : bucket.tone === "partner"
+                    ? "border-pink/40 bg-pink/10 text-ink"
+                    : "border-ink/15 bg-cream/50 text-ink/78";
+              return (
+                <div key={bucket.key}>
+                  <button
+                    type="button"
+                    onClick={() => toggleCollapse(bucket.key)}
+                    className={`flex w-full items-center justify-between gap-3 border-b border-ink/15 px-5 py-3 text-left transition-colors hover:bg-cream/40 ${toneStyles}`}
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      <span
+                        className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-widest ${
+                          bucket.tone === "main"
+                            ? "border-mint/60 bg-mint/20 text-ink"
+                            : bucket.tone === "partner"
+                              ? "border-pink/60 bg-pink/20 text-ink"
+                              : "border-ink/30 bg-cream/70 text-ink/80"
+                        }`}
+                      >
+                        {bucket.tone === "main"
+                          ? "My wallet"
+                          : bucket.tone === "partner"
+                            ? "Partner"
+                            : "Unattributed"}
+                      </span>
+                      <span className="truncate font-semibold text-sm">{bucket.label}</span>
+                      {bucket.address && (
+                        <span className="truncate font-mono text-[11px] text-ink/72">
+                          {bucket.address.slice(0, 6)}…{bucket.address.slice(-4)}
+                        </span>
+                      )}
                     </div>
-                    <div className="mt-2 text-lg font-semibold">{item.publicFact}</div>
-                    <div className="mt-1 text-xs text-ink/55">{item.localDateTime}</div>
-                    <div className="mt-1 truncate font-mono text-xs text-ink/45">{item.hash}</div>
-                  </div>
-                  <span className="rounded-full border border-papaya/40 bg-papaya/15 px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-ink">
-                    Needs review
-                  </span>
+                    <div className="flex items-center gap-2">
+                      <span className="rounded-full bg-papaya/30 px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest text-ink">
+                        {bucket.records.length} pending
+                      </span>
+                      <ChevronDown
+                        className={`h-4 w-4 transition-transform ${collapsed ? "" : "rotate-180"}`}
+                      />
+                    </div>
+                  </button>
+                  {!collapsed &&
+                    bucket.records.map((item) => (
+                      <button
+                        key={item.id}
+                        onClick={() => setActiveId(item.id)}
+                        className={`block w-full p-5 text-left transition-colors ${
+                          active?.id === item.id ? "bg-mint/10" : "bg-white hover:bg-cream/60"
+                        }`}
+                      >
+                        <div className="flex flex-wrap items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-ink/68">
+                              <FileSearch className="h-3.5 w-3.5" /> {item.source}
+                            </div>
+                            <div className="mt-2 text-lg font-semibold">{item.publicFact}</div>
+                            <div className="mt-1 text-xs text-ink/75">{item.localDateTime}</div>
+                            <div className="mt-1 truncate font-mono text-xs text-ink/68">
+                              {item.hash}
+                            </div>
+                          </div>
+                          <span className="rounded-full border border-papaya/40 bg-papaya/15 px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-ink">
+                            Needs review
+                          </span>
+                        </div>
+                      </button>
+                    ))}
                 </div>
-              </button>
-            ))}
+              );
+            })}
           </div>
           {extensionRecords.length === 0 && (
-            <div className="rounded-3xl border border-ink/35 bg-white p-8 text-center text-sm text-ink/55 shadow-soft">
+            <div className="rounded-3xl border border-ink/35 bg-white p-8 text-center text-sm text-ink/75 shadow-soft">
               No review items yet. Two ways to get one:{" "}
               <a href="/install" className="font-semibold text-ink underline underline-offset-2">
                 install the extension
@@ -156,7 +381,7 @@ function ReviewQueue() {
               </div>
 
               <label className="mt-5 block">
-                <span className="text-[10px] font-bold uppercase tracking-widest text-ink/50">
+                <span className="text-[10px] font-bold uppercase tracking-widest text-ink/72">
                   Category
                 </span>
                 <select
@@ -173,7 +398,7 @@ function ReviewQueue() {
               </label>
 
               <label className="mt-4 block">
-                <span className="text-[10px] font-bold uppercase tracking-widest text-ink/50">
+                <span className="text-[10px] font-bold uppercase tracking-widest text-ink/72">
                   Counterparty
                 </span>
                 <input
@@ -186,7 +411,7 @@ function ReviewQueue() {
               </label>
 
               <label className="mt-4 block">
-                <span className="text-[10px] font-bold uppercase tracking-widest text-ink/50">
+                <span className="text-[10px] font-bold uppercase tracking-widest text-ink/72">
                   Private note
                 </span>
                 <textarea
@@ -199,7 +424,7 @@ function ReviewQueue() {
               </label>
 
               <label className="mt-4 block">
-                <span className="text-[10px] font-bold uppercase tracking-widest text-ink/50">
+                <span className="text-[10px] font-bold uppercase tracking-widest text-ink/72">
                   Invoice, project, or task
                 </span>
                 <input
@@ -218,11 +443,11 @@ function ReviewQueue() {
                 <Check className="h-4 w-4" /> Record review
               </button>
               {actionMessage && (
-                <p className="mt-3 text-xs leading-5 text-ink/55">{actionMessage}</p>
+                <p className="mt-3 text-xs leading-5 text-ink/75">{actionMessage}</p>
               )}
             </>
           ) : (
-            <div className="text-sm text-ink/55">No transaction selected.</div>
+            <div className="text-sm text-ink/75">No transaction selected.</div>
           )}
         </aside>
       </div>
@@ -339,7 +564,7 @@ function formatAmount(amount: string, token: string) {
 function ReviewRow({ label, value, mono }: { label: string; value: string; mono?: boolean }) {
   return (
     <div className="min-w-0 border-b border-ink/20 pb-2">
-      <div className="text-[10px] uppercase tracking-widest text-ink/45">{label}</div>
+      <div className="text-[10px] uppercase tracking-widest text-ink/68">{label}</div>
       <div className={`mt-1 min-w-0 break-all leading-6 ${mono ? "font-mono text-xs" : ""}`}>
         {value}
       </div>

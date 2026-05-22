@@ -40,8 +40,8 @@ export function UseCases() {
                   <Icon className="h-5 w-5" />
                 </div>
                 <h3 className="mt-6 text-xl font-semibold tracking-tight">{it.title}</h3>
-                <p className="mt-2 text-sm text-ink/60">{it.desc}</p>
-                <div className="mt-6 font-mono text-[10px] uppercase tracking-widest text-ink/40">Use case · 0{i + 1}</div>
+                <p className="mt-2 text-sm text-ink/78">{it.desc}</p>
+                <div className="mt-6 font-mono text-[10px] uppercase tracking-widest text-ink/65">Use case · 0{i + 1}</div>
               </motion.div>
             );
           })}

@@ -241,7 +241,7 @@ function PayInvoice() {
       <div className="mx-auto grid min-h-screen max-w-6xl gap-6 px-5 py-6 lg:grid-cols-[1fr_420px] lg:px-8 lg:py-10">
         <section className="flex flex-col justify-between rounded-3xl border border-ink/15 bg-white p-6 shadow-soft lg:p-8">
           <div>
-            <Link to="/" className="inline-flex items-center gap-2 text-sm text-ink/60 hover:text-ink">
+            <Link to="/" className="inline-flex items-center gap-2 text-sm text-ink/78 hover:text-ink">
               <ArrowLeft className="h-4 w-4" /> PayMemo
             </Link>
             <div className="mt-10 inline-flex items-center gap-2 rounded-full border border-mint/30 bg-mint/10 px-3 py-1 text-xs font-semibold text-ink">
@@ -250,7 +250,7 @@ function PayInvoice() {
             <h1 className="mt-5 max-w-3xl text-5xl font-semibold tracking-tight lg:text-7xl">
               Pay invoice with meaning attached.
             </h1>
-            <p className="mt-5 max-w-2xl text-base leading-7 text-ink/60">
+            <p className="mt-5 max-w-2xl text-base leading-7 text-ink/78">
               PayMemo saves your private reason before signing, verifies the Morph transaction, and
               writes the final record to your encrypted ledger.
             </p>
@@ -260,7 +260,7 @@ function PayInvoice() {
             {Object.entries(lifecycle).map(([label, active]) => (
               <div key={label} className="rounded-2xl border border-ink/15 bg-cream/60 p-3">
                 <div className={`h-1.5 rounded-full ${active ? "bg-pink" : "bg-ink/10"}`} />
-                <div className="mt-2 text-[10px] font-bold uppercase tracking-widest text-ink/50">
+                <div className="mt-2 text-[10px] font-bold uppercase tracking-widest text-ink/72">
                   {label}
                 </div>
               </div>
@@ -270,16 +270,16 @@ function PayInvoice() {
 
         <aside className="rounded-3xl border border-ink/15 bg-white p-5 shadow-float">
           <div className="rounded-2xl bg-ink p-5 text-cream">
-            <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-cream/60">
+            <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-cream/80">
               <FileText className="h-4 w-4" /> Invoice
             </div>
             <div className="mt-3 text-2xl font-semibold">{invoiceNumber}</div>
-            <div className="mt-1 text-sm text-cream/60">Morph Hoodi Testnet</div>
+            <div className="mt-1 text-sm text-cream/80">Morph Hoodi Testnet</div>
             <div className="mt-8 flex items-end justify-between gap-4">
               <div>
-                <div className="text-[10px] uppercase tracking-widest text-cream/50">Amount</div>
+                <div className="text-[10px] uppercase tracking-widest text-cream/75">Amount</div>
                 <div className="mt-1 font-mono text-3xl font-semibold">
-                  {amount} <span className="text-base text-cream/60">{token}</span>
+                  {amount} <span className="text-base text-cream/80">{token}</span>
                 </div>
               </div>
               <StatusPill status={invoice?.status ?? "loading"} />
@@ -302,7 +302,7 @@ function PayInvoice() {
                   key={item}
                   onClick={() => setCategory(item)}
                   className={`rounded-full px-3 py-1.5 text-xs font-semibold ${
-                    category === item ? "bg-ink text-cream" : "bg-white text-ink/65"
+                    category === item ? "bg-ink text-cream" : "bg-white text-ink/80"
                   }`}
                 >
                   {item}
@@ -383,7 +383,7 @@ async function markInvoicePaid({
 function Info({ label, value, mono }: { label: string; value: string; mono?: boolean }) {
   return (
     <div className="flex items-center justify-between rounded-2xl border border-ink/15 bg-cream/60 px-4 py-3 text-sm">
-      <span className="text-ink/55">{label}</span>
+      <span className="text-ink/75">{label}</span>
       <span className={mono ? "font-mono" : ""}>{value}</span>
     </div>
   );
@@ -400,7 +400,7 @@ function Input({
 }) {
   return (
     <label className="mt-3 block rounded-xl bg-white px-3 py-2">
-      <div className="text-[10px] uppercase tracking-widest text-ink/45">{label}</div>
+      <div className="text-[10px] uppercase tracking-widest text-ink/68">{label}</div>
       <input
         value={value}
         onChange={(event) => onChange(event.target.value)}

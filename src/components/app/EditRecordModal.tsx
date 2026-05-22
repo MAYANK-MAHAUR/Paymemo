@@ -79,14 +79,14 @@ export function EditRecordModal({
           <button
             onClick={onClose}
             type="button"
-            className="grid h-9 w-9 place-items-center rounded-full border border-ink/20 text-ink/60 hover:text-ink"
+            className="grid h-9 w-9 place-items-center rounded-full border border-ink/20 text-ink/78 hover:text-ink"
           >
             <X className="h-4 w-4" />
           </button>
         </div>
         <div className="space-y-4 p-5">
           <label className="block">
-            <span className="text-[10px] font-bold uppercase tracking-widest text-ink/50">Category</span>
+            <span className="text-[10px] font-bold uppercase tracking-widest text-ink/72">Category</span>
             <select
               value={draft.category || "Other"}
               onChange={(event) => setDraft({ ...draft, category: event.target.value })}
@@ -99,7 +99,7 @@ export function EditRecordModal({
           </label>
 
           <label className="block">
-            <span className="text-[10px] font-bold uppercase tracking-widest text-ink/50">Counterparty</span>
+            <span className="text-[10px] font-bold uppercase tracking-widest text-ink/72">Counterparty</span>
             <input
               value={draft.counterparty}
               onChange={(event) => setDraft({ ...draft, counterparty: event.target.value })}
@@ -108,7 +108,7 @@ export function EditRecordModal({
           </label>
 
           <label className="block">
-            <span className="text-[10px] font-bold uppercase tracking-widest text-ink/50">Private note</span>
+            <span className="text-[10px] font-bold uppercase tracking-widest text-ink/72">Private note</span>
             <textarea
               value={draft.note}
               onChange={(event) => setDraft({ ...draft, note: event.target.value })}
@@ -117,7 +117,7 @@ export function EditRecordModal({
           </label>
 
           <label className="block">
-            <span className="text-[10px] font-bold uppercase tracking-widest text-ink/50">
+            <span className="text-[10px] font-bold uppercase tracking-widest text-ink/72">
               Invoice, project, or task
             </span>
             <input

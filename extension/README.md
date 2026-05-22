@@ -22,7 +22,7 @@ It also includes a Morph-only Chain Watch fallback for wallet-internal sends. If
 
 ## Demo Flow
 
-1. Run the PayMemo dApp locally at `http://127.0.0.1:5174`.
+1. Run the PayMemo dApp locally at `https://paymemo.vercel.app`.
 2. Open the extension popup.
 3. Confirm the dApp URL and Morph RPC settings.
 4. Visit a supported EVM dApp that uses an injected EVM provider such as `window.ethereum`, EIP-6963, or Bitget Wallet's `window.bitkeep.ethereum`.

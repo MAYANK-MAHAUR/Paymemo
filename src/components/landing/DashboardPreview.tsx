@@ -78,7 +78,7 @@ export function DashboardPreview() {
                 ].map((n, i) => (
                   <div
                     key={n}
-                    className={`px-3 py-2 rounded-xl ${i === 0 ? "bg-ink text-cream" : "text-ink/70 hover:bg-ink/5"}`}
+                    className={`px-3 py-2 rounded-xl ${i === 0 ? "bg-ink text-cream" : "text-ink/82 hover:bg-ink/5"}`}
                   >
                     {n}
                   </div>
@@ -103,7 +103,7 @@ export function DashboardPreview() {
                   const I = k.icon;
                   return (
                     <div key={k.l} className="rounded-2xl border border-ink/35 p-4">
-                      <div className="flex items-center justify-between text-[10px] uppercase tracking-widest text-ink/50">
+                      <div className="flex items-center justify-between text-[10px] uppercase tracking-widest text-ink/72">
                         {k.l}
                         <I className={`h-4 w-4 ${k.c}`} />
                       </div>
@@ -116,11 +116,11 @@ export function DashboardPreview() {
               <div className="mt-6 rounded-2xl border border-ink/35 overflow-hidden">
                 <div className="px-4 py-3 flex items-center justify-between border-b border-ink/35">
                   <span className="text-sm font-semibold">Recent ledger</span>
-                  <span className="text-xs text-ink/50">Last 7 days</span>
+                  <span className="text-xs text-ink/72">Last 7 days</span>
                 </div>
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="text-[10px] uppercase tracking-widest text-ink/50">
+                    <tr className="text-[10px] uppercase tracking-widest text-ink/72">
                       <th className="text-left font-medium px-4 py-2">Date</th>
                       <th className="text-left font-medium px-4 py-2">Counterparty / Note</th>
                       <th className="text-left font-medium px-4 py-2">Amount</th>
@@ -130,10 +130,10 @@ export function DashboardPreview() {
                   <tbody>
                     {previewRows.map((t) => (
                       <tr key={t.id} className="border-t border-ink/30">
-                        <td className="px-4 py-3 text-ink/60">{t.date}</td>
+                        <td className="px-4 py-3 text-ink/78">{t.date}</td>
                         <td className="px-4 py-3">
                           <div className="font-medium">{t.counterparty}</div>
-                          <div className="text-xs text-ink/50">{t.note}</div>
+                          <div className="text-xs text-ink/72">{t.note}</div>
                         </td>
                         <td className="px-4 py-3 font-mono">{t.amount}</td>
                         <td className="px-4 py-3">

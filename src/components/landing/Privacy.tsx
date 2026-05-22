@@ -10,7 +10,7 @@ export function Privacy() {
           <h2 className="mt-3 text-4xl font-semibold tracking-[-0.02em] sm:text-5xl">
             Public transaction. <span className="font-serif-italic text-gradient-aurora">Private meaning.</span>
           </h2>
-          <p className="mt-4 max-w-2xl text-ink/65">
+          <p className="mt-4 max-w-2xl text-ink/80">
             The blockchain shows the transfer. PayMemo encrypts the human context: category, note,
             counterparty, invoice, and agent reason.
           </p>
@@ -23,7 +23,7 @@ export function Privacy() {
             viewport={{ once: true }}
             className="rounded-3xl border border-ink/35 bg-white p-8 shadow-soft"
           >
-            <div className="flex items-center gap-2 text-xs font-mono uppercase tracking-widest text-ink/50">
+            <div className="flex items-center gap-2 text-xs font-mono uppercase tracking-widest text-ink/72">
               <Eye className="h-4 w-4" /> Public / Onchain
             </div>
             <div className="mt-6 space-y-3 font-mono text-sm">
@@ -36,12 +36,12 @@ export function Privacy() {
                 ["MEMO", "-"],
               ].map(([k, v]) => (
                 <div key={k} className="flex items-center justify-between border-b border-ink/30 pb-2.5">
-                  <span className="text-ink/45">{k}</span>
+                  <span className="text-ink/68">{k}</span>
                   <span>{v}</span>
                 </div>
               ))}
             </div>
-            <div className="mt-6 inline-flex items-center gap-2 rounded-full bg-ink/5 px-3 py-1 text-xs text-ink/55">
+            <div className="mt-6 inline-flex items-center gap-2 rounded-full bg-ink/5 px-3 py-1 text-xs text-ink/75">
               Visible on the explorer / no private context
             </div>
           </motion.div>
