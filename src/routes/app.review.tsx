@@ -34,17 +34,27 @@ function ReviewQueue() {
   const [ownerWallet, setOwnerWallet] = useState<string>("");
   const [partnerWallets, setPartnerWallets] = useState<PartnerWallet[]>([]);
   const [completedRecords, setCompletedRecords] = useState<ReviewItem[]>([]);
+  // All tx hashes that exist in the user's vault, regardless of status. We
+  // capture in-flight rows (`pending_signature`, `pending_chain`) too so a
+  // chain-watch row never sneaks into Pending while a /app/send broadcast
+  // is mid-flight. Confirmed hashes are still tracked here AND in
+  // `completedRecords`; they're the same set, just split because completed
+  // items also need their decrypted memo for rendering.
+  const [vaultClaimedTxHashes, setVaultClaimedTxHashes] = useState<Set<string>>(
+    () => new Set<string>(),
+  );
   const [completedStatus, setCompletedStatus] = useState<
     "idle" | "loading" | "loaded" | "locked" | "error"
   >("idle");
 
-  // Set of tx hashes that already have a confirmed counterpart somewhere -
-  // either in vault_records (dApp /app/send) or in extension_records itself
-  // marked confirmed (extension popup save). The Pending list filters
-  // against this set so a tx the user has already explained never shows up
-  // demanding a second review.
+  // Set of tx hashes that already have a counterpart somewhere - either in
+  // vault_records (dApp /app/send, ANY status, including in-flight ones)
+  // or in extension_records itself marked confirmed (extension popup/
+  // sidepanel save). The Pending list filters against this set so a tx
+  // the user is already handling (or has already explained) never shows
+  // up demanding a second review.
   const completedTxHashes = useMemo(() => {
-    const set = new Set<string>();
+    const set = new Set<string>(vaultClaimedTxHashes);
     for (const r of completedRecords) {
       const hash = (r.hash || "").toLowerCase();
       if (hash && hash !== "pending") set.add(hash);
@@ -55,15 +65,32 @@ function ReviewQueue() {
       }
     }
     return set;
-  }, [completedRecords, extensionQuery.data]);
+  }, [completedRecords, extensionQuery.data, vaultClaimedTxHashes]);
 
-  // Pending = records that landed via chain-watch / extension and still
-  // need a memo. Anything `needs-review` or earlier-state belongs here -
-  // unless its tx hash already has a confirmed twin elsewhere.
+  // Pending = records that landed via chain-watch (server-side Morph
+  // scanner OR the extension's background chain scan) and still need a
+  // memo. ONLY `needs-review` belongs here.
+  //
+  // We deliberately exclude the in-flight extension-popup states
+  // (`pending_signature`, `pending_chain`, `signed`, `intent`, `rejected`,
+  // `failed`) because those rows belong to a live capture session - the
+  // user is either typing the memo right now in the extension overlay,
+  // or the tx already failed and there is nothing to review. Surfacing
+  // them in /app/review made completed extension-popup payments and
+  // website /app/send payments briefly appear in BOTH tabs while the
+  // status climbed from pending_signature -> confirmed.
+  //
+  // Website (/app/send) payments only ever write to `vault_records`, and
+  // that table is filtered to `status === "confirmed"` (see
+  // `loadCompletedRecords` below), so they never appear here regardless.
+  //
+  // The `completedTxHashes` guard still strips any chain-watch row whose
+  // tx hash already has a confirmed twin in either table - that's how we
+  // prevent the same payment from showing on both tabs at once.
   const extensionRecords = useMemo<ReviewItem[]>(
     () =>
       (extensionQuery.data ?? [])
-        .filter((record) => record.status !== "confirmed")
+        .filter((record) => record.status === "needs-review")
         .filter((record) => {
           const hash = (record.txHash || "").toLowerCase();
           return !hash || !completedTxHashes.has(hash);
@@ -95,6 +122,7 @@ function ReviewQueue() {
     const session = readVaultSession();
     if (!session?.walletAddress) {
       setCompletedRecords([]);
+      setVaultClaimedTxHashes(new Set());
       setCompletedStatus("locked");
       return;
     }
@@ -105,6 +133,18 @@ function ReviewQueue() {
       const records = await fetchEncryptedVaultRecords(session.walletAddress).catch(
         () => [],
       );
+
+      // Build the dedupe set from EVERY vault row regardless of status so
+      // an in-flight /app/send broadcast (pending_signature / pending_chain)
+      // also suppresses any duplicate `needs-review` row a chain-watcher
+      // might have created in the meantime.
+      const claimedHashes = new Set<string>();
+      for (const record of records) {
+        const tx = (record.publicRecord as { txHash?: string } | null)?.txHash;
+        if (tx) claimedHashes.add(tx.toLowerCase());
+      }
+      setVaultClaimedTxHashes(claimedHashes);
+
       const onlyConfirmed = records.filter((record) => record.publicRecord.status === "confirmed");
 
       if (!key) {
@@ -130,6 +170,7 @@ function ReviewQueue() {
     } catch (error) {
       console.warn("[paymemo] completed load failed", error);
       setCompletedRecords([]);
+      setVaultClaimedTxHashes(new Set());
       setCompletedStatus("error");
     }
   }
