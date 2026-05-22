@@ -1,5 +1,6 @@
 import { motion } from "framer-motion";
 import { Activity, ArrowDownLeft, ArrowUpRight, Layers } from "lucide-react";
+import { Logo } from "@/components/brand/Logo";
 
 const badge = (s: string) => {
   const map: Record<string, string> = {
@@ -43,9 +44,12 @@ export function DashboardPreview() {
     <section id="dashboard" className="relative py-24 sm:py-32 px-6">
       <div className="mx-auto max-w-7xl">
         <div className="max-w-3xl">
-          <span className="text-xs font-mono uppercase tracking-[0.2em] text-pink">05 - Dashboard</span>
+          <span className="text-xs font-mono uppercase tracking-[0.2em] text-pink">
+            05 - Dashboard
+          </span>
           <h2 className="mt-3 text-4xl sm:text-5xl font-semibold tracking-[-0.02em]">
-            Your stablecoin activity, <span className="font-serif-italic text-gradient-aurora">finally legible.</span>
+            Your stablecoin activity,{" "}
+            <span className="font-serif-italic text-gradient-aurora">finally legible.</span>
           </h2>
         </div>
 
@@ -60,16 +64,30 @@ export function DashboardPreview() {
           <div className="grid lg:grid-cols-[240px_1fr]">
             <aside className="border-r border-ink/35 p-5 bg-cream/40">
               <div className="flex items-center gap-2">
-                <span className="grid h-7 w-7 place-items-center rounded-lg bg-aurora text-white text-xs font-bold">P</span>
+                <Logo size={28} className="rounded-[8px]" />
                 <span className="font-semibold text-sm">PayMemo</span>
               </div>
               <nav className="mt-8 space-y-1 text-sm">
-                {["Dashboard", "Send Payment", "Ledger", "Invoices", "Batch Payouts", "Reports"].map((n, i) => (
-                  <div key={n} className={`px-3 py-2 rounded-xl ${i === 0 ? "bg-ink text-cream" : "text-ink/70 hover:bg-ink/5"}`}>{n}</div>
+                {[
+                  "Dashboard",
+                  "Send Payment",
+                  "Ledger",
+                  "Invoices",
+                  "Batch Payouts",
+                  "Reports",
+                ].map((n, i) => (
+                  <div
+                    key={n}
+                    className={`px-3 py-2 rounded-xl ${i === 0 ? "bg-ink text-cream" : "text-ink/70 hover:bg-ink/5"}`}
+                  >
+                    {n}
+                  </div>
                 ))}
               </nav>
               <div className="mt-10 rounded-2xl border border-mint/30 bg-mint/10 p-3">
-                <div className="text-[10px] font-bold uppercase tracking-widest text-mint">Vault</div>
+                <div className="text-[10px] font-bold uppercase tracking-widest text-mint">
+                  Vault
+                </div>
                 <div className="mt-1 text-xs text-ink">Unlocked & syncing</div>
               </div>
             </aside>
@@ -119,7 +137,9 @@ export function DashboardPreview() {
                         </td>
                         <td className="px-4 py-3 font-mono">{t.amount}</td>
                         <td className="px-4 py-3">
-                          <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest ${badge(t.status)}`}>
+                          <span
+                            className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest ${badge(t.status)}`}
+                          >
                             {t.status}
                           </span>
                         </td>

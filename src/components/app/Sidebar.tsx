@@ -18,6 +18,7 @@ import {
   WalletCards,
 } from "lucide-react";
 import { useEffect, useState } from "react";
+import { Logo } from "@/components/brand/Logo";
 import { readVaultSession } from "@/lib/crypto-vault";
 
 type NavItem = { to: string; label: string; icon: LucideIcon; exact?: boolean };
@@ -88,9 +89,7 @@ export function AppSidebar() {
   return (
     <aside className="hidden lg:flex w-64 shrink-0 flex-col border-r border-ink/35 bg-white/70 backdrop-blur p-4 sticky top-0 h-screen">
       <Link to="/" className="flex items-center gap-2 px-2 py-2">
-        <span className="grid h-8 w-8 place-items-center rounded-xl bg-aurora text-white font-bold">
-          P
-        </span>
+        <Logo size={32} className="rounded-xl" />
         <span className="font-semibold tracking-tight">PayMemo</span>
       </Link>
       <nav className="mt-6 space-y-1">
@@ -104,9 +103,7 @@ export function AppSidebar() {
           onClick={() => setMoreOpen((value) => !value)}
           aria-expanded={moreOpen}
           className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-colors ${
-            moreActive
-              ? "bg-ink/5 text-ink"
-              : "text-ink/70 hover:bg-ink/5 hover:text-ink"
+            moreActive ? "bg-ink/5 text-ink" : "text-ink/70 hover:bg-ink/5 hover:text-ink"
           }`}
         >
           <MoreHorizontal className="h-4 w-4" />
@@ -126,9 +123,7 @@ export function AppSidebar() {
       </nav>
       <div
         className={`mt-auto rounded-2xl border p-3 text-xs ${
-          vaultUnlocked
-            ? "border-mint/30 bg-mint/10"
-            : "border-red-900/30 bg-red-50"
+          vaultUnlocked ? "border-mint/30 bg-mint/10" : "border-red-900/30 bg-red-50"
         }`}
       >
         <div

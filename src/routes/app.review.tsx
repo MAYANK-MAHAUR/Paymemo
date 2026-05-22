@@ -19,7 +19,12 @@ function ReviewQueue() {
         .map((record, index) => toReviewItem(record, index)),
     [extensionQuery.data],
   );
-  const [draft, setDraft] = useState({ category: "Other", counterparty: "", note: "", project: "" });
+  const [draft, setDraft] = useState({
+    category: "Other",
+    counterparty: "",
+    note: "",
+    project: "",
+  });
   const [actionMessage, setActionMessage] = useState("");
   const [activeId, setActiveId] = useState<string>("");
   const active = extensionRecords.find((item) => item.id === activeId) ?? extensionRecords[0];
@@ -28,7 +33,7 @@ function ReviewQueue() {
     setActiveId((current) =>
       current && extensionRecords.some((record) => record.id === current)
         ? current
-        : extensionRecords[0]?.id ?? "",
+        : (extensionRecords[0]?.id ?? ""),
     );
   }, [extensionRecords]);
 
@@ -84,7 +89,9 @@ function ReviewQueue() {
           <div className="flex flex-wrap items-center justify-between gap-3 border-b border-ink/25 px-5 py-4">
             <div>
               <div className="text-sm font-semibold">Payments to review</div>
-              <div className="text-xs text-ink/50">Click a transaction, add context, then record it.</div>
+              <div className="text-xs text-ink/50">
+                Click a transaction, add context, then record it.
+              </div>
             </div>
             <button
               onClick={() => void loadExtensionRecords()}
@@ -120,7 +127,15 @@ function ReviewQueue() {
           </div>
           {extensionRecords.length === 0 && (
             <div className="rounded-3xl border border-ink/35 bg-white p-8 text-center text-sm text-ink/55 shadow-soft">
-              No review items yet. Send or detect a Morph Hoodi transaction with the extension and it will appear here.
+              No review items yet. Two ways to get one:{" "}
+              <a href="/install" className="font-semibold text-ink underline underline-offset-2">
+                install the extension
+              </a>{" "}
+              and capture a wallet tx, or open the{" "}
+              <a href="/app" className="font-semibold text-ink underline underline-offset-2">
+                dashboard
+              </a>{" "}
+              and enable <em>Browser chain watch</em> to scan Morph Hoodi from this tab.
             </div>
           )}
         </section>
@@ -141,39 +156,57 @@ function ReviewQueue() {
               </div>
 
               <label className="mt-5 block">
-                <span className="text-[10px] font-bold uppercase tracking-widest text-ink/50">Category</span>
+                <span className="text-[10px] font-bold uppercase tracking-widest text-ink/50">
+                  Category
+                </span>
                 <select
                   value={draft.category}
-                  onChange={(event) => setDraft((current) => ({ ...current, category: event.target.value }))}
+                  onChange={(event) =>
+                    setDraft((current) => ({ ...current, category: event.target.value }))
+                  }
                   className="mt-2 w-full rounded-2xl border border-ink/25 bg-cream/60 p-3 text-sm outline-none focus:border-mint"
                 >
-                  {categories.map((category) => <option key={category}>{category}</option>)}
+                  {categories.map((category) => (
+                    <option key={category}>{category}</option>
+                  ))}
                 </select>
               </label>
 
               <label className="mt-4 block">
-                <span className="text-[10px] font-bold uppercase tracking-widest text-ink/50">Counterparty</span>
+                <span className="text-[10px] font-bold uppercase tracking-widest text-ink/50">
+                  Counterparty
+                </span>
                 <input
                   value={draft.counterparty}
-                  onChange={(event) => setDraft((current) => ({ ...current, counterparty: event.target.value }))}
+                  onChange={(event) =>
+                    setDraft((current) => ({ ...current, counterparty: event.target.value }))
+                  }
                   className="mt-2 w-full rounded-2xl border border-ink/25 bg-cream/60 p-3 text-sm outline-none focus:border-mint"
                 />
               </label>
 
               <label className="mt-4 block">
-                <span className="text-[10px] font-bold uppercase tracking-widest text-ink/50">Private note</span>
+                <span className="text-[10px] font-bold uppercase tracking-widest text-ink/50">
+                  Private note
+                </span>
                 <textarea
                   value={draft.note}
-                  onChange={(event) => setDraft((current) => ({ ...current, note: event.target.value }))}
+                  onChange={(event) =>
+                    setDraft((current) => ({ ...current, note: event.target.value }))
+                  }
                   className="mt-2 min-h-28 w-full rounded-2xl border border-ink/25 bg-cream/60 p-3 text-sm outline-none focus:border-mint"
                 />
               </label>
 
               <label className="mt-4 block">
-                <span className="text-[10px] font-bold uppercase tracking-widest text-ink/50">Invoice, project, or task</span>
+                <span className="text-[10px] font-bold uppercase tracking-widest text-ink/50">
+                  Invoice, project, or task
+                </span>
                 <input
                   value={draft.project}
-                  onChange={(event) => setDraft((current) => ({ ...current, project: event.target.value }))}
+                  onChange={(event) =>
+                    setDraft((current) => ({ ...current, project: event.target.value }))
+                  }
                   className="mt-2 w-full rounded-2xl border border-ink/25 bg-cream/60 p-3 text-sm outline-none focus:border-mint"
                 />
               </label>
@@ -184,7 +217,9 @@ function ReviewQueue() {
               >
                 <Check className="h-4 w-4" /> Record review
               </button>
-              {actionMessage && <p className="mt-3 text-xs leading-5 text-ink/55">{actionMessage}</p>}
+              {actionMessage && (
+                <p className="mt-3 text-xs leading-5 text-ink/55">{actionMessage}</p>
+              )}
             </>
           ) : (
             <div className="text-sm text-ink/55">No transaction selected.</div>
@@ -220,7 +255,8 @@ function toReviewItem(record: SyncedRecord, index: number): ReviewItem {
     publicFact: formatPublicFact(record),
     hash: record.txHash ?? "pending",
     category: record.category ?? "Other",
-    counterparty: record.counterparty ?? (record.direction === "incoming" ? record.from ?? "" : record.to),
+    counterparty:
+      record.counterparty ?? (record.direction === "incoming" ? (record.from ?? "") : record.to),
     note: record.note ?? "",
     project: record.project ?? "",
     status: record.status,

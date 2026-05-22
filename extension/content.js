@@ -214,15 +214,11 @@ function renderOverlay(payload) {
         }
         .top-inner { position: relative; display: flex; gap: 12px; align-items: center; }
         .logo {
-          display: grid;
+          display: block;
           width: 42px;
           height: 42px;
-          place-items: center;
-          border-radius: 16px;
-          border: 1px solid rgba(92,255,130,.38);
-          background: rgba(92,255,130,.16);
-          color: #5cff82;
-          font-weight: 900;
+          border-radius: 12px;
+          object-fit: contain;
           box-shadow: 0 18px 40px rgba(0,0,0,.25);
         }
         .eyebrow {
@@ -351,7 +347,7 @@ function renderOverlay(payload) {
           <div class="top">
             <div class="grain"></div>
             <div class="top-inner">
-              <div class="logo">P</div>
+              <img class="logo" src="${chrome.runtime.getURL("icons/icon-48.png")}" alt="PayMemo" width="42" height="42" />
               <div>
                 <div class="eyebrow">PayMemo Wallet Assist</div>
                 <h1>What is this transaction for?</h1>

@@ -1,7 +1,7 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { Topbar } from "@/components/app/Topbar";
 import { StatusBadge } from "@/components/app/StatusBadge";
-import { Chrome, FileSearch, PanelRightOpen, RadioTower, RefreshCw } from "lucide-react";
+import { Chrome, Download, FileSearch, PanelRightOpen, RadioTower, RefreshCw } from "lucide-react";
 import { useExtensionRecords, type ExtensionRecord } from "@/lib/extension-records";
 
 export const Route = createFileRoute("/app/assist")({
@@ -28,28 +28,43 @@ function WalletAssist() {
       />
       <div className="space-y-5 p-6 pb-28 lg:p-10 lg:pb-10">
         <section className="grid gap-4 lg:grid-cols-3">
+          <Link
+            to="/install"
+            className="group rounded-3xl border border-mint/40 bg-mint/10 p-5 shadow-soft transition hover:border-mint/70 hover:bg-mint/15"
+          >
+            <div className="flex items-center gap-2 text-sm font-semibold">
+              <Download className="h-4 w-4 text-mint" /> Install extension
+            </div>
+            <p className="mt-2 text-sm leading-6 text-ink/70">
+              Get the PayMemo browser extension for the full experience — popup memo prompts, side
+              panel review, and pre-signature capture on any dApp.
+            </p>
+            <span className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-ink group-hover:underline">
+              Open install guide <Chrome className="h-3.5 w-3.5" />
+            </span>
+          </Link>
           <div className="rounded-3xl border border-ink/35 bg-white p-5 shadow-soft">
             <div className="flex items-center gap-2 text-sm font-semibold">
-              <Chrome className="h-4 w-4" /> Load extension
+              <RadioTower className="h-4 w-4 text-mint" /> Or watch from this tab
             </div>
             <p className="mt-2 text-sm leading-6 text-ink/60">
-              Load the `extension/` folder from Chrome extensions, then pin PayMemo.
+              No extension? Toggle{" "}
+              <Link to="/app" className="underline underline-offset-2 hover:text-ink">
+                Browser chain watch
+              </Link>{" "}
+              on the dashboard — same Morph detection, runs while this tab is open.
             </p>
           </div>
           <div className="rounded-3xl border border-ink/35 bg-white p-5 shadow-soft">
             <div className="flex items-center gap-2 text-sm font-semibold">
-              <RadioTower className="h-4 w-4 text-mint" /> Listen to wallets
+              <PanelRightOpen className="h-4 w-4" /> Add the memo
             </div>
             <p className="mt-2 text-sm leading-6 text-ink/60">
-              Add watched wallets from the dashboard or side panel. Matching Morph txs will ask for info.
-            </p>
-          </div>
-          <div className="rounded-3xl border border-ink/35 bg-white p-5 shadow-soft">
-            <div className="flex items-center gap-2 text-sm font-semibold">
-              <PanelRightOpen className="h-4 w-4" /> Review prompts
-            </div>
-            <p className="mt-2 text-sm leading-6 text-ink/60">
-              When a tx is detected, fill in the memo and click Save & sync.
+              When a tx is detected, the extension popup or the dashboard{" "}
+              <Link to="/app/review" className="underline underline-offset-2 hover:text-ink">
+                Review tab
+              </Link>{" "}
+              asks <em>what was this for</em>. Save it and the record is yours, encrypted.
             </p>
           </div>
         </section>
@@ -58,7 +73,9 @@ function WalletAssist() {
           <div className="flex flex-wrap items-center justify-between gap-3 border-b border-ink/35 px-6 py-4">
             <div>
               <div className="text-sm font-semibold">Needs info</div>
-              <div className="text-xs text-ink/50">Detected transactions waiting for user context</div>
+              <div className="text-xs text-ink/50">
+                Detected transactions waiting for user context
+              </div>
             </div>
             <button
               onClick={() => void loadSyncedRecords()}
@@ -71,32 +88,44 @@ function WalletAssist() {
             <table className="w-full min-w-[860px] text-sm">
               <thead>
                 <tr className="bg-cream/60 text-[10px] uppercase tracking-widest text-ink/50">
-                  {["Source", "Action", "Chain", "Amount", "Category", "Review source", "Status"].map(
-                    (h) => (
-                      <th key={h} className="px-5 py-3 text-left font-medium">
-                        {h}
-                      </th>
-                    ),
-                  )}
+                  {[
+                    "Source",
+                    "Action",
+                    "Chain",
+                    "Amount",
+                    "Category",
+                    "Review source",
+                    "Status",
+                  ].map((h) => (
+                    <th key={h} className="px-5 py-3 text-left font-medium">
+                      {h}
+                    </th>
+                  ))}
                 </tr>
               </thead>
               <tbody>
                 {pendingRecords.map((intent) => (
                   <tr key={intent.id} className="border-t border-ink/30 hover:bg-cream/40">
-                    <td className="px-5 py-3.5 font-medium">{intent.provider ?? intent.source ?? "Wallet Assist"}</td>
+                    <td className="px-5 py-3.5 font-medium">
+                      {intent.provider ?? intent.source ?? "Wallet Assist"}
+                    </td>
                     <td className="px-5 py-3.5">
                       <div>{formatAction(intent)}</div>
                       <div className="text-xs text-ink/50">{formatCounterparty(intent)}</div>
                     </td>
                     <td className="px-5 py-3.5 text-ink/60">Morph Hoodi</td>
-                    <td className="px-5 py-3.5 font-mono">{intent.amount} {intent.token}</td>
+                    <td className="px-5 py-3.5 font-mono">
+                      {intent.amount} {intent.token}
+                    </td>
                     <td className="px-5 py-3.5">
                       <span className="rounded-full border border-ink/35 bg-cream px-2 py-0.5 text-[10px] font-medium">
                         {intent.category}
                       </span>
                     </td>
                     <td className="px-5 py-3.5 text-xs text-ink/60">
-                      {intent.provider === "Morph Chain Watch" ? "Needs user memo" : "Extension capture"}
+                      {intent.provider === "Morph Chain Watch"
+                        ? "Needs user memo"
+                        : "Extension capture"}
                     </td>
                     <td className="px-5 py-3.5">
                       <StatusBadge status={intent.status} />
@@ -164,7 +193,9 @@ function WalletAssist() {
                         {record.category}
                       </span>
                     </td>
-                    <td className="px-5 py-3.5">{record.counterparty ?? formatCounterparty(record)}</td>
+                    <td className="px-5 py-3.5">
+                      {record.counterparty ?? formatCounterparty(record)}
+                    </td>
                     <td className="max-w-[260px] truncate px-5 py-3.5 text-ink/70">
                       {record.note ?? "No private note synced."}
                     </td>

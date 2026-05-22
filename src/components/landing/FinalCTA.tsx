@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, Download } from "lucide-react";
 import { motion } from "framer-motion";
 
 export function FinalCTA() {
@@ -18,14 +18,28 @@ export function FinalCTA() {
               Turn wallet activity into <span className="font-serif-italic">financial memory.</span>
             </h2>
             <p className="mt-6 text-ink/80 max-w-xl text-lg">
-              Wallets show what happened. PayMemo records why after a transaction is detected.
-              Start with a Morph Hoodi test payment or watched-wallet demo.
+              Wallets show what happened. PayMemo records why after a transaction is detected. Start
+              with a Morph Hoodi test payment, install the browser extension, or watch a wallet
+              right from the dashboard.
             </p>
             <div className="mt-9 flex flex-wrap gap-3">
-              <Link to="/app" className="group inline-flex items-center gap-2 rounded-full bg-ink text-cream px-6 py-3.5 text-sm font-semibold hover:bg-ink/85 transition-all">
-                Launch App <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+              <Link
+                to="/install"
+                className="group inline-flex items-center gap-2 rounded-full bg-ink text-cream px-6 py-3.5 text-sm font-semibold hover:bg-ink/85 transition-all"
+              >
+                <Download className="h-4 w-4" /> Download Extension
               </Link>
-              <Link to="/app/send" className="inline-flex items-center gap-2 rounded-full bg-white/80 backdrop-blur border border-ink/35 px-6 py-3.5 text-sm font-semibold hover:bg-white transition">
+              <Link
+                to="/app"
+                className="group inline-flex items-center gap-2 rounded-full bg-white/80 backdrop-blur border border-ink/35 px-6 py-3.5 text-sm font-semibold hover:bg-white transition"
+              >
+                Launch App{" "}
+                <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+              </Link>
+              <Link
+                to="/app/send"
+                className="inline-flex items-center gap-2 rounded-full bg-white/60 backdrop-blur border border-ink/25 px-6 py-3.5 text-sm font-semibold hover:bg-white transition"
+              >
                 Start with a test payment
               </Link>
             </div>

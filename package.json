@@ -7,6 +7,7 @@
     "dev": "vite dev",
     "build": "vite build",
     "build:dev": "vite build --mode development",
+    "build:extension": "powershell -NoProfile -ExecutionPolicy Bypass -Command \"if (Test-Path './public/paymemo-extension.zip') { Remove-Item -LiteralPath './public/paymemo-extension.zip' -Force }; Compress-Archive -Path './extension/*' -DestinationPath './public/paymemo-extension.zip' -Force; Write-Output 'Wrote public/paymemo-extension.zip'\"",
     "preview": "vite preview",
     "lint": "eslint .",
     "format": "prettier --write ."

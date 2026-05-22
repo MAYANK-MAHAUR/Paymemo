@@ -75,16 +75,37 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Lovable App" },
-      { name: "description", content: "Lovable Generated Project" },
-      { name: "author", content: "Lovable" },
-      { property: "og:title", content: "Lovable App" },
-      { property: "og:description", content: "Lovable Generated Project" },
+      { title: "PayMemo \u2014 Remember every transaction" },
+      {
+        name: "description",
+        content:
+          "PayMemo turns wallet activity into financial memory. Capture context before you sign, watch wallets on Morph, and review every transaction in an encrypted vault.",
+      },
+      { name: "author", content: "PayMemo" },
+      { name: "theme-color", content: "#0E0E0E" },
+      { property: "og:title", content: "PayMemo \u2014 Remember every transaction" },
+      {
+        property: "og:description",
+        content:
+          "Add meaning, memos and counterparties to every wallet transaction. Private by default, encrypted in your vault.",
+      },
       { property: "og:type", content: "website" },
-      { name: "twitter:card", content: "summary" },
-      { name: "twitter:site", content: "@Lovable" },
+      { property: "og:image", content: "/og-image.png" },
+      { property: "og:image:width", content: "1200" },
+      { property: "og:image:height", content: "630" },
+      { name: "twitter:card", content: "summary_large_image" },
+      { name: "twitter:title", content: "PayMemo \u2014 Remember every transaction" },
+      {
+        name: "twitter:description",
+        content: "Financial memory for Web3. On Morph.",
+      },
+      { name: "twitter:image", content: "/og-image.png" },
     ],
     links: [
+      { rel: "icon", type: "image/svg+xml", href: "/logo.svg" },
+      { rel: "icon", type: "image/x-icon", href: "/favicon.ico" },
+      { rel: "apple-touch-icon", sizes: "180x180", href: "/icons/logo-180.png" },
+      { rel: "mask-icon", href: "/logo.svg", color: "#A8F139" },
       {
         rel: "preconnect",
         href: "https://fonts.googleapis.com",

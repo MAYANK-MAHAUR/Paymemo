@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as InstallRouteImport } from './routes/install'
 import { Route as AppRouteImport } from './routes/app'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AppIndexRouteImport } from './routes/app.index'
@@ -36,6 +37,11 @@ import { Route as ApiBatchPayoutsRouteImport } from './routes/api.batch-payouts'
 import { Route as ApiAgentPaymentIntentRouteImport } from './routes/api.agent-payment-intent'
 import { Route as ApiAgentMemoryRouteImport } from './routes/api.agent-memory'
 
+const InstallRoute = InstallRouteImport.update({
+  id: '/install',
+  path: '/install',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AppRoute = AppRouteImport.update({
   id: '/app',
   path: '/app',
@@ -170,6 +176,7 @@ const ApiAgentMemoryRoute = ApiAgentMemoryRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/app': typeof AppRouteWithChildren
+  '/install': typeof InstallRoute
   '/api/agent-memory': typeof ApiAgentMemoryRoute
   '/api/agent-payment-intent': typeof ApiAgentPaymentIntentRoute
   '/api/batch-payouts': typeof ApiBatchPayoutsRoute
@@ -197,6 +204,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/install': typeof InstallRoute
   '/api/agent-memory': typeof ApiAgentMemoryRoute
   '/api/agent-payment-intent': typeof ApiAgentPaymentIntentRoute
   '/api/batch-payouts': typeof ApiBatchPayoutsRoute
@@ -226,6 +234,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/app': typeof AppRouteWithChildren
+  '/install': typeof InstallRoute
   '/api/agent-memory': typeof ApiAgentMemoryRoute
   '/api/agent-payment-intent': typeof ApiAgentPaymentIntentRoute
   '/api/batch-payouts': typeof ApiBatchPayoutsRoute
@@ -256,6 +265,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/app'
+    | '/install'
     | '/api/agent-memory'
     | '/api/agent-payment-intent'
     | '/api/batch-payouts'
@@ -283,6 +293,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/install'
     | '/api/agent-memory'
     | '/api/agent-payment-intent'
     | '/api/batch-payouts'
@@ -311,6 +322,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/app'
+    | '/install'
     | '/api/agent-memory'
     | '/api/agent-payment-intent'
     | '/api/batch-payouts'
@@ -340,6 +352,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AppRoute: typeof AppRouteWithChildren
+  InstallRoute: typeof InstallRoute
   ApiAgentMemoryRoute: typeof ApiAgentMemoryRoute
   ApiAgentPaymentIntentRoute: typeof ApiAgentPaymentIntentRoute
   ApiBatchPayoutsRoute: typeof ApiBatchPayoutsRoute
@@ -356,6 +369,13 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/install': {
+      id: '/install'
+      path: '/install'
+      fullPath: '/install'
+      preLoaderRoute: typeof InstallRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/app': {
       id: '/app'
       path: '/app'
@@ -576,6 +596,7 @@ const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AppRoute: AppRouteWithChildren,
+  InstallRoute: InstallRoute,
   ApiAgentMemoryRoute: ApiAgentMemoryRoute,
   ApiAgentPaymentIntentRoute: ApiAgentPaymentIntentRoute,
   ApiBatchPayoutsRoute: ApiBatchPayoutsRoute,

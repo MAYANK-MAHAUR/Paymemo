@@ -2,6 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { Topbar } from "@/components/app/Topbar";
 import { StatusBadge } from "@/components/app/StatusBadge";
 import { WalletConnectModal } from "@/components/app/WalletConnectModal";
+import { BrowserChainWatchCard } from "@/components/app/BrowserChainWatchCard";
 import {
   decryptPrivateMetadata,
   getRememberedVaultKey,
@@ -210,21 +211,27 @@ function Dashboard() {
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
               <div className="flex items-center gap-2 text-sm font-semibold">
-                <RadioTower className="h-4 w-4 text-mint" /> Partner wallets to watch
+                <RadioTower className="h-4 w-4 text-mint" /> Wallets to watch
               </div>
               <p className="mt-1 text-xs text-ink/55">
-                Add teammate, vendor, or partner wallets. PayMemo syncs them to the extension so matching Morph transactions ask for context.
+                Add the wallets PayMemo should listen to on Morph Hoodi —
+                <strong> start with your own</strong>, then add teammate, vendor,
+                or partner wallets. Detections appear in{" "}
+                <Link to="/app/review" className="underline underline-offset-2 hover:text-ink">
+                  Needs Review
+                </Link>{" "}
+                whether you use the extension or just this dashboard tab.
               </p>
             </div>
             <button
               onClick={() => {
                 if (!requireWallet()) return;
                 syncPartnerWalletsToExtension(partnerWallets);
-                setMessage("Partner wallets synced to the extension watcher.");
+                setMessage("Watched wallets pushed to the PayMemo extension (if installed).");
               }}
               className="rounded-xl border border-ink/30 px-3 py-2 text-xs font-semibold"
             >
-              Sync watcher
+              Sync to extension
             </button>
           </div>
           {!walletAddress && !readVaultSession() && (
@@ -275,6 +282,22 @@ function Dashboard() {
             {partnerWallets.length === 0 && <span className="text-xs text-ink/45">No partner wallets added yet.</span>}
           </div>
         </div>
+
+        <BrowserChainWatchCard
+          ownerAddress={walletAddress || readVaultSession()?.walletAddress}
+          watchedAddresses={[
+            ...(walletAddress ? [walletAddress] : []),
+            ...partnerWallets.map((wallet) => wallet.address),
+          ]}
+          labels={{
+            ...(walletAddress
+              ? { [walletAddress.toLowerCase()]: "My wallet" }
+              : {}),
+            ...Object.fromEntries(
+              partnerWallets.map((wallet) => [wallet.address, wallet.label]),
+            ),
+          }}
+        />
 
         <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
           {cards.map((c, i) => (

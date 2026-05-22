@@ -125,7 +125,7 @@ function render() {
   root.innerHTML = `
     <div class="shell">
       <header>
-        <span class="logo">P</span>
+        <img class="logo" src="icons/icon-48.png" width="40" height="40" alt="PayMemo" />
         <div>
           <span class="eyebrow">${popupMode ? "PayMemo transaction prompt" : "PayMemo Side Panel"}</span>
           <h1>${popupMode ? "Transaction detected" : "Morph tx memory"}</h1>

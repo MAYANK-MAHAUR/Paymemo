@@ -1,6 +1,6 @@
 import { motion } from "framer-motion";
 import { Link } from "@tanstack/react-router";
-import { ArrowRight, Play } from "lucide-react";
+import { ArrowRight, Download, Play } from "lucide-react";
 import heroBg from "@/assets/hero-bg.png";
 
 /**
@@ -41,10 +41,10 @@ export function Hero() {
           transition={{ duration: 0.8, delay: 0.45 }}
           className="font-body-alt mx-auto mt-10 max-w-[60ch] text-base sm:text-lg text-white/70 leading-relaxed"
         >
-          PayMemo is the private memory layer for every wallet · human or AI agent.
-          It listens for supported Morph transactions, pops up after a payment is detected,
-          asks <em className="font-serif-italic text-white/90">what was this for</em>,
-          and turns raw on-chain activity into payroll, invoices, agent spend, and tax-ready records.
+          PayMemo is the private memory layer for every wallet · human or AI agent. It listens for
+          supported Morph transactions, pops up after a payment is detected, asks{" "}
+          <em className="font-serif-italic text-white/90">what was this for</em>, and turns raw
+          on-chain activity into payroll, invoices, agent spend, and tax-ready records.
         </motion.p>
 
         <motion.div
@@ -53,7 +53,9 @@ export function Hero() {
           transition={{ duration: 0.8, delay: 0.55 }}
           className="mt-6 flex flex-wrap items-center justify-center gap-2 font-body-alt text-[10px] uppercase tracking-[0.28em] text-white/50"
         >
-          <span className="rounded-full border border-white/25 px-3 py-1 text-white/80">For AI agents</span>
+          <span className="rounded-full border border-white/25 px-3 py-1 text-white/80">
+            For AI agents
+          </span>
           <span className="text-white/30">·</span>
           <span>Track agent spend</span>
           <span className="text-white/30">·</span>
@@ -74,7 +76,16 @@ export function Hero() {
             data-cursor-label="launch"
             className="group inline-flex items-center gap-2 rounded-full bg-white text-black px-7 py-3.5 text-sm font-semibold uppercase tracking-[0.18em] hover:opacity-90 transition-all"
           >
-            Launch App <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+            Launch App{" "}
+            <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+          </Link>
+          <Link
+            to="/install"
+            data-cursor="cta"
+            data-cursor-label="install"
+            className="group inline-flex items-center gap-2 rounded-full bg-[var(--pink)] text-black px-7 py-3.5 text-sm font-semibold uppercase tracking-[0.18em] hover:opacity-90 transition-all"
+          >
+            <Download className="h-4 w-4" /> Get Extension
           </Link>
           <a
             href="#wallet-assist"
