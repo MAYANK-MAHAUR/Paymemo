@@ -105,12 +105,84 @@ async function main() {
   // 3. Build the SSR function — esbuild bundles everything into a single ESM file.
   await fs.mkdir(outFunc, { recursive: true });
 
-  // Write an entry that adapts TanStack Start's Web fetch handler to Vercel's
-  // Node 22 expected signature: `export default (req: Request) => Promise<Response>`.
+  // Write an entry that adapts TanStack Start's Web-standard fetch handler
+  // to Vercel's Node 22 (req: IncomingMessage, res: ServerResponse) signature.
+  // Vercel does not give us a Web Request on the nodejs22.x runtime, so we
+  // construct one ourselves (preserving method, headers, body stream, host).
   const adapterEntry = path.join(distServer, "_vercel-entry.mjs");
   await fs.writeFile(
     adapterEntry,
-    `import server from "./server.js";\nexport default async function handler(request) {\n  return server.fetch(request);\n}\n`,
+    `import { Readable } from "node:stream";
+import server from "./server.js";
+
+function buildRequest(req) {
+  const host = req.headers["host"] ?? "localhost";
+  const proto = req.headers["x-forwarded-proto"] ?? "https";
+  const url = new URL(req.url ?? "/", proto + "://" + host);
+
+  const headers = new Headers();
+  for (const [name, value] of Object.entries(req.headers)) {
+    if (Array.isArray(value)) {
+      for (const item of value) headers.append(name, item);
+    } else if (value != null) {
+      headers.set(name, String(value));
+    }
+  }
+
+  const method = (req.method || "GET").toUpperCase();
+  const hasBody = method !== "GET" && method !== "HEAD";
+  const init = { method, headers };
+  if (hasBody) {
+    init.body = Readable.toWeb(req);
+    init.duplex = "half";
+  }
+  return new Request(url, init);
+}
+
+async function writeBody(response, res) {
+  if (!response.body) {
+    res.end();
+    return;
+  }
+  const reader = response.body.getReader();
+  try {
+    for (;;) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      if (value) res.write(value);
+    }
+  } finally {
+    res.end();
+  }
+}
+
+export default async function handler(req, res) {
+  try {
+    const request = buildRequest(req);
+    const response = await server.fetch(request);
+
+    res.statusCode = response.status;
+    response.headers.forEach((value, key) => {
+      if (key.toLowerCase() === "set-cookie") return;
+      res.setHeader(key, value);
+    });
+    const setCookies =
+      typeof response.headers.getSetCookie === "function"
+        ? response.headers.getSetCookie()
+        : [];
+    if (setCookies.length) res.setHeader("set-cookie", setCookies);
+
+    await writeBody(response, res);
+  } catch (error) {
+    console.error("[paymemo] handler failed", error);
+    if (!res.headersSent) {
+      res.statusCode = 500;
+      res.setHeader("content-type", "text/plain; charset=utf-8");
+    }
+    res.end("Internal Server Error");
+  }
+}
+`,
   );
 
   try {
