@@ -73,7 +73,8 @@ async function main() {
   const config = {
     version: 3,
     routes: [
-      // Long-cache hashed assets shipped by Vite.
+      // Long-cache hashed assets shipped by Vite. Filename hashes change
+      // per build, so this can be immutable / 1 year.
       {
         src: "^/assets/(.*)$",
         headers: {
@@ -90,7 +91,21 @@ async function main() {
       },
       // Try static files (favicon, og-image, /paymemo-extension.zip, etc.).
       { handle: "filesystem" },
-      // Everything else → SSR.
+      // Everything else - SSR. HTML responses must NEVER be cached on the
+      // browser or any intermediate CDN: filename hashes for /assets/* change
+      // every deploy, so a cached HTML page from a previous deploy would
+      // reference chunk files that no longer exist on disk. This produces
+      // the classic "all my chunks are 404" / blank-screen bug. Pinning
+      // SSR routes to `no-store, must-revalidate` makes every navigation
+      // fetch fresh HTML with current chunk references.
+      {
+        src: "^/(?!_render).*",
+        has: [{ type: "header", key: "accept", value: ".*text/html.*" }],
+        headers: {
+          "cache-control": "no-store, must-revalidate",
+        },
+        continue: true,
+      },
       { src: "/(.*)", dest: "/_render" },
     ],
   };
@@ -171,6 +186,20 @@ export default async function handler(req, res) {
         ? response.headers.getSetCookie()
         : [];
     if (setCookies.length) res.setHeader("set-cookie", setCookies);
+
+    // HTML responses from the SSR function MUST NOT be cached anywhere -
+    // not the browser, not Vercel's CDN, nothing. Each deploy emits a new
+    // set of hashed asset chunks; cached HTML from a previous deploy would
+    // reference chunk filenames that no longer exist on disk and the
+    // resulting page would 404 every script tag. JSON / api responses keep
+    // whatever cache-control the route handler chose.
+    const contentType = res.getHeader("content-type");
+    const isHtml = typeof contentType === "string" && contentType.toLowerCase().includes("text/html");
+    if (isHtml) {
+      res.setHeader("cache-control", "no-store, must-revalidate");
+      res.setHeader("pragma", "no-cache");
+      res.setHeader("expires", "0");
+    }
 
     await writeBody(response, res);
   } catch (error) {
