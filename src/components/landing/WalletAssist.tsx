@@ -133,7 +133,6 @@ function BrowserStage({ step }: { step: number }) {
 
           <AnimatePresence>{step === 4 && <Receipt key="rc" />}</AnimatePresence>
 
-          {/* Visual cursor that moves per step */}
           <DemoCursor step={step} />
         </div>
       </div>
@@ -160,7 +159,6 @@ function DemoCursor({ step }: { step: number }) {
       transition={{ type: "spring", stiffness: 110, damping: 20, mass: 0.7 }}
       className="pointer-events-none absolute z-30 -translate-x-1/2 -translate-y-1/2"
     >
-      {/* soft glow */}
       <motion.div
         key={`glow-${step}`}
         initial={{ scale: 0.6, opacity: 0 }}

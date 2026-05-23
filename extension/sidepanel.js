@@ -81,7 +81,7 @@ function chainWatchRecords(all) {
     .slice(0, 1);
 }
 
-// -------- popupMode: single capture form for one detected tx ---------------
+// popupMode: single capture form for one detected tx
 
 function captureCard(record) {
   const category = record.category || "Other";
@@ -196,7 +196,7 @@ function renderCapturePopup(root) {
   });
 }
 
-// -------- default mode: wallet manager only --------------------------------
+// default mode: wallet manager only
 
 function renderWalletManager(root) {
   // Snapshot any in-progress typing so the 10s heartbeat doesn't wipe it

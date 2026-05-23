@@ -11,14 +11,12 @@ export function Hero() {
     <section className="relative min-h-[100vh] overflow-hidden text-white">
       <HeroBackdrop />
 
-      {/* Top eyebrow */}
       <div className="relative z-10 flex items-center justify-between px-6 sm:px-10 pt-28 text-[10px] uppercase tracking-[0.3em] text-white/75 font-body-alt">
         <span>PayMemo · vol.01</span>
         <span className="hidden sm:inline">Memory layer / wallets &amp; agents</span>
         <span>{new Date().getFullYear()}</span>
       </div>
 
-      {/* Center stage */}
       <div className="relative z-10 mx-auto max-w-6xl px-6 pt-14 pb-32 sm:pt-20 text-center">
         <motion.h1
           initial={{ opacity: 0, y: 24 }}
@@ -97,7 +95,6 @@ export function Hero() {
           </a>
         </motion.div>
 
-        {/* Bottom marquee of categories */}
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -113,7 +110,6 @@ export function Hero() {
         </motion.div>
       </div>
 
-      {/* Bottom corner ticker */}
       <div className="absolute bottom-6 left-0 right-0 z-10 flex items-center justify-between px-6 sm:px-10 text-[10px] uppercase tracking-[0.3em] text-white/68 font-body-alt">
         <span>Scroll &darr;</span>
         <span className="hidden sm:inline">Editorial · chapter 01</span>
@@ -135,7 +131,6 @@ function HeroBackdrop() {
           backgroundRepeat: "no-repeat",
         }}
       />
-      {/* dark overlay for legibility */}
       <div className="absolute inset-0 bg-black/70" />
     </div>
   );

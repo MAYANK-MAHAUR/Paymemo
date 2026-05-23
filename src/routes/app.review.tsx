@@ -541,7 +541,6 @@ function ReviewQueue() {
             </button>
           </div>
 
-          {/* Pending / Completed tab pills */}
           <div className="flex items-center gap-2 border-b border-ink/15 px-5 py-3">
             {(["pending", "completed"] as const).map((tab) => {
               const isActive = activeTab === tab;

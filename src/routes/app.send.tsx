@@ -388,7 +388,6 @@ function Send() {
 
       <div className="p-6 lg:p-10 grid lg:grid-cols-[1fr_440px] gap-8">
         <div className="space-y-8">
-          {/* Wallet / Network bar */}
           <div className="rounded-3xl border border-ink/25 bg-white p-4 shadow-float ring-1 ring-ink/10 flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-3">
               <button
@@ -418,9 +417,7 @@ function Send() {
 
           {/* Single-send only. For multi-recipient flows see /app/batch. */}
 
-          {/* Form card */}
           <div className="rounded-3xl border border-ink/25 bg-ink/[0.025] shadow-float ring-1 ring-ink/10 overflow-hidden">
-            {/* Asset picker bar */}
             <div className="px-7 pt-7 pb-2 flex items-center justify-between gap-4">
               <div>
                 <div className="text-[10px] font-extrabold uppercase tracking-[0.2em] text-ink/75">
@@ -458,7 +455,6 @@ function Send() {
             </div>
             <div className="mx-7 h-px bg-ink/10" />
 
-            {/* Single mode */}
             {mode === "single" && (
               <div className="px-7 pt-8 pb-4 space-y-7">
                 <div className="grid sm:grid-cols-2 gap-6">
@@ -528,7 +524,6 @@ function Send() {
               </div>
             )}
 
-            {/* Batch mode */}
             {mode === "batch" && (
               <div className="px-7 pt-8 pb-4 space-y-3">
                 <div className="text-xs text-ink/75 flex items-center justify-between">
@@ -599,7 +594,6 @@ function Send() {
               </div>
             )}
 
-            {/* Category + Tag */}
             <div className="px-7 pt-10 pb-4 space-y-5">
               <div>
                 <Label>What is this transaction for?</Label>
@@ -622,7 +616,6 @@ function Send() {
           </div>
         </div>
 
-        {/* Sidebar: Intent Preview / Tx summary */}
         <div className="space-y-5">
           <motion.div
             initial={{ opacity: 0, y: 8 }}
@@ -736,7 +729,6 @@ function Send() {
         onConnected={(account) => void onWalletConnected(account)}
       />
 
-      {/* Asset picker modal */}
       <AnimatePresence>
         {assetPickerOpen && (
           <motion.div

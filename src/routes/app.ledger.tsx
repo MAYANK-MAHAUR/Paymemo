@@ -68,7 +68,6 @@ const statuses = [
   "rejected",
 ];
 
-// -- Date range presets ----------------------------------------------------
 // Each preset is a function from `now` ? `{ from, to }` epoch range. `null`
 // means "no bound on that side". The financial-year presets use April?March
 // (Indian / UK / SG / Japan FY) since that's the most common globally; if

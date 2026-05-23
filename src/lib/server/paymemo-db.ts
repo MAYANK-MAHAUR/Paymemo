@@ -834,10 +834,8 @@ export async function listExtensionPairings(walletAddress: string) {
   return db.extensionPairings.filter((pair) => pair.walletAddress === walletKey);
 }
 
-// ---------------------------------------------------------------------------
 // Watched wallets - server-side chain-watch list. Owned by the user's connected
 // wallet (owner_wallet); contains addresses the cron / on-load scan should sweep.
-// ---------------------------------------------------------------------------
 
 type WatchedWalletRow = {
   owner_wallet: string;

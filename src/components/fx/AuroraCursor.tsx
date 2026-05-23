@@ -75,7 +75,6 @@ export function AuroraCursor() {
 
   return (
     <>
-      {/* Aurora blob */}
       <motion.div
         aria-hidden
         className="pointer-events-none fixed z-[60] -translate-x-1/2 -translate-y-1/2 mix-blend-multiply"
@@ -91,7 +90,6 @@ export function AuroraCursor() {
         </motion.div>
       </motion.div>
 
-      {/* Crisp dot */}
       <motion.div
         aria-hidden
         className="pointer-events-none fixed z-[61] -translate-x-1/2 -translate-y-1/2"

@@ -119,7 +119,6 @@ export function BeaconCursor() {
 
   return (
     <div aria-hidden className="pointer-events-none fixed inset-0 z-[9999]">
-      {/* Trailing aurora ring */}
       <motion.div
         className="absolute -translate-x-1/2 -translate-y-1/2"
         style={{ left: ringX, top: ringY }}
@@ -135,7 +134,6 @@ export function BeaconCursor() {
           style={{ width: ringW, height: ringH }}
           className="border backdrop-blur-[2px]"
         />
-        {/* aurora glow */}
         <motion.div
           animate={{ opacity: hovered ? 0.55 : 0.25, scale: hovered ? 1.4 : 1 }}
           className="absolute inset-0 rounded-full bg-[var(--pink)] blur-2xl"
@@ -167,7 +165,6 @@ export function BeaconCursor() {
         )}
       </motion.div>
 
-      {/* Click ripples at click point */}
       {ripples.map((r) => (
         <motion.div
           key={r.id}

@@ -115,7 +115,7 @@ async function onNewBlock(blockNumber) {
   await triggerScan(blockNumber);
 }
 
-// --- HTTP polling loop -------------------------------------------------------
+// HTTP polling loop
 
 let httpPollHandle = null;
 function startHttpPolling() {
@@ -137,7 +137,7 @@ function stopHttpPolling() {
   httpPollHandle = null;
 }
 
-// --- WebSocket subscription --------------------------------------------------
+// WebSocket subscription
 
 let wsClient = null;
 let wsBackoffMs = 1000;
@@ -207,7 +207,7 @@ function startWebSocket() {
   });
 }
 
-// --- Startup banner + shutdown -----------------------------------------------
+// Startup banner + shutdown
 
 log("PayMemo Morph worker starting");
 log(`PAYMEMO_API_URL = ${PAYMEMO_API_URL}`);

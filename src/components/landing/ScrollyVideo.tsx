@@ -1,8 +1,7 @@
 import { useRef } from "react";
 import { motion, useScroll, useTransform } from "framer-motion";
 
-const VIDEO_SRC =
-  "https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4";
+const VIDEO_SRC = "/demo.mp4";
 
 export function ScrollyVideo() {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -12,7 +11,6 @@ export function ScrollyVideo() {
     offset: ["start start", "end end"],
   });
 
-  // Linear (no easing) tied to scroll for tactile wheel response.
   const width = useTransform(scrollYProgress, [0, 0.5], ["60%", "100%"]);
   const height = useTransform(scrollYProgress, [0, 0.5], ["60%", "100%"]);
   const radius = useTransform(scrollYProgress, [0, 0.5], [32, 0]);
@@ -30,7 +28,6 @@ export function ScrollyVideo() {
       style={{ height: "200vh" }}
     >
       <div className="sticky top-0 h-screen w-full overflow-hidden bg-background flex items-center justify-center">
-        {/* Backdrop text fades out as the card expands */}
         <motion.div
           style={{ opacity: backdropOpacity }}
           className="absolute inset-0 flex flex-col items-center justify-center px-6 pointer-events-none"
@@ -47,7 +44,6 @@ export function ScrollyVideo() {
           </p>
         </motion.div>
 
-        {/* Expanding video card */}
         <motion.div
           style={{ width, height, borderRadius: radius, boxShadow }}
           className="relative overflow-hidden bg-ink"
@@ -58,13 +54,12 @@ export function ScrollyVideo() {
             muted
             loop
             playsInline
+            preload="metadata"
             className="h-full w-full object-cover"
           />
-          {/* Subtle vignette for depth */}
           <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-ink/40 via-transparent to-transparent" />
         </motion.div>
       </div>
     </section>
   );
 }
-

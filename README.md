@@ -6,7 +6,13 @@ PayMemo turns raw on-chain activity into reviewable, encrypted financial records
 
 Built for the **Morph Build Sprint**, **Payroll and B2B track**. Live on Morph Hoodi testnet at <https://paymemo.vercel.app>.
 
-![PayMemo architecture](./public/architecture.svg)
+## Demo
+
+<video src="./public/demo.mp4" controls width="100%"></video>
+
+> If the inline video doesn't render on your GitHub view, watch it here: [public/demo.mp4](./public/demo.mp4)
+
+See the live architecture page at [`public/architecture.html`](./public/architecture.html) (open in any browser).
 
 ---
 
@@ -53,7 +59,7 @@ triggers /api/cron/scan-morph on every block.         rpc-hoodi.morph.network
                                                       Native ETH + L2USDC + WETH
 ```
 
-See `public/architecture.svg` for the full visual diagram.
+See `public/architecture.html` for the full visual diagram — open it in any browser.
 
 ### Trust model
 
@@ -131,7 +137,8 @@ See `public/architecture.svg` for the full visual diagram.
 │   ├── strip-em-dashes.ps1
 │   └── bump-text-opacity.ps1
 ├── public/
-│   ├── architecture.svg
+│   ├── architecture.html
+│   ├── demo.mp4
 │   ├── logo.svg / favicon.ico / og-image.png
 │   ├── icons/                   App icons 16-512
 │   └── paymemo-extension.zip    Sideload archive
